@@ -11,6 +11,7 @@ model Cliente {
   idCliente  String   @id @default(cuid())
   nombre     String
   apellido   String
+  cedula     String   @unique
   genero     Genero
   email      String   @unique
   contrasena String

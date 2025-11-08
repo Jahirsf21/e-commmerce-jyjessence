@@ -1,8 +1,57 @@
 import prisma from '../../database/config/prisma.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { URLSearchParams } from 'url';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
 
 class ClientFacade {
+
+  async consultarCedulaTSE(cedula) {
+    const jar = new CookieJar();
+    const client = wrapper(axios.create({ jar }));
+    const tseUrl = 'https://servicioselectorales.tse.go.cr/chc/consulta_cedula.aspx';
+    
+    try {
+
+      const initialResponse = await client.get(tseUrl);
+      const $ = cheerio.load(initialResponse.data);
+      const viewState = $('#__VIEWSTATE').val();
+      const viewStateGenerator = $('#__VIEWSTATEGENERATOR').val();
+      const eventValidation = $('#__EVENTVALIDATION').val();
+
+      const formData = new URLSearchParams();
+      formData.append('__VIEWSTATE', viewState);
+      formData.append('__VIEWSTATEGENERATOR', viewStateGenerator);
+      formData.append('__EVENTVALIDATION', eventValidation);
+      formData.append('txtcedula', cedula);
+      formData.append('btnConsultaCedula', 'Consultar');
+
+      const postResponse = await client.post(tseUrl, formData, {
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': tseUrl
+        },
+      });
+
+      const $result = cheerio.load(postResponse.data);
+      const nombreCompleto = $result('#lblnombrecompleto').text().trim();
+
+      if (!nombreCompleto || nombreCompleto.includes('no encontrada')) {
+        return null;
+      }
+
+      const partes = nombreCompleto.split(' ');
+      const nombre  = partes.slice(0, 2).join(' ');
+      const apellido = partes.slice(2).join(' ');
+      return { cedula, nombre, apellido };
+    } catch (error) {
+      console.error('Error en el scraping del TSE:', error);
+      throw new Error('No se pudo consultar la información en el TSE.');
+    }
+  }
 
   async autenticar(email, contrasena) {
     const cliente = await prisma.cliente.findUnique({ where: { email } });
@@ -20,12 +69,21 @@ class ClientFacade {
   }
 
   async registrar(datosCliente) {
+    const datosTSE = await this.consultarCedulaTSE(datosCliente.cedula);
+    if (!datosTSE) {
+      const error = new Error('La cédula proporcionada no es válida o no fue encontrada.');
+      error.code = 'CEDULA_INVALIDA';
+      throw error;
+    }
+
     const saltRounds = 10;
     const contrasenaHasheada = await bcrypt.hash(datosCliente.contrasena, saltRounds);
     
     const nuevoCliente = await prisma.cliente.create({
       data: {
         ...datosCliente,
+        nombre: datosTSE.nombre,
+        apellido: datosTSE.apellido,
         contrasena: contrasenaHasheada,
       },
     });

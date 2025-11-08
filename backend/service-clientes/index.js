@@ -10,12 +10,29 @@ app.use(express.json());
 // ==      RUTAS PÚBLICAS (SIN TOKEN)      ==
 // ==========================================
 
+app.get('/api/clientes/consulta-cedula/:cedula', async (req, res) => {
+  try {
+    const datos = await ClientFacade.consultarCedulaTSE(req.params.cedula);
+    if (!datos) {
+      return res.status(404).json({ error: 'Cédula no encontrada.' });
+    }
+    res.json(datos);
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudo consultar la información.' });
+  }
+});
+
 app.post('/api/clientes/registro', async (req, res) => {
   try {
     const clienteSeguro = await ClientFacade.registrar(req.body);
     res.status(201).json(clienteSeguro);
   } catch (error) {
-    if (error.code === 'P2002') return res.status(409).json({ error: 'El correo electrónico ya está en uso.' });
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'El correo electrónico o la cédula ya están en uso.' });
+    }
+    if (error.code === 'CEDULA_INVALIDA') {
+      return res.status(400).json({ error: error.message });
+    }
     console.error("Error al registrar cliente:", error);
     res.status(500).json({ error: 'No se pudo registrar el cliente.' });
   }
