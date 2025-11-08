@@ -1,7 +1,7 @@
 packages:
   - database
   - service-clientes
-
+  - service-catalogo
 ignoredBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'

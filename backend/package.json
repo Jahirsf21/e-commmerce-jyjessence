@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": [
     "database",
-    "service-clientes"
+    "service-clientes",
+    "service-catalogo"
   ]
 }
