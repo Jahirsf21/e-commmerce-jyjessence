@@ -1,122 +1,121 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import LanguageDropdown from './LanguageDropdown';
+import ModalPerfil from './ModalPerfil';
 
 const Header = () => {
   const { t, i18n } = useTranslation();
   const navegar = useNavigate();
-  const { usuario, estaAutenticado, cerrarSesion } = useAuth();
+  const { usuario, estaAutenticado } = useAuth();
+  const [mostrarMenuIdioma, setMostrarMenuIdioma] = useState(false);
+  const [mostrarModalPerfil, setMostrarModalPerfil] = useState(false);
 
-  const manejarCierreSesion = () => {
-    cerrarSesion();
-    navegar('/');
+  const cambiarIdioma = (codigo) => {
+    i18n.changeLanguage(codigo);
+    setMostrarMenuIdioma(false);
   };
 
-  return (
-    <header>
-  <div className="bg-blue-900 text-white text-xs flex justify-end items-center px-4 py-2">
-        <div className="mr-4">
-          <LanguageDropdown
-            value={i18n.language}
-            onChange={codigo => i18n.changeLanguage(codigo)}
-          />
-        </div>
-        <a
-          href="https://www.instagram.com/jyj.essence"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-4"
-        >
-          <img
-            src="https://res.cloudinary.com/drec8g03e/image/upload/v1762661193/instagram_znvg6o.svg"
-            alt="Instagram JyJ Essence"
-            className="h-6 w-6 object-contain"
-            style={{ display: 'inline-block' }}
-          />
-        </a>
-        <a
-          href="https://wa.me/50660440248"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-4 mr-10"
-        >
-          <img
-            src="https://res.cloudinary.com/drec8g03e/image/upload/v1762661324/whatsapp_yc9csu.svg"
-            alt="WhatsApp JyJ Essence"
-            className="h-6 w-6 object-contain"
-            style={{ display: 'inline-block' }}
-          />
-        </a>
-      </div>
+  const nombrePerfil = estaAutenticado 
+    ? `${usuario?.nombre || ''} ${usuario?.apellido || ''}`.trim() || 'Mi Perfil'
+    : 'Cuenta';
 
-      <div className="bg-white shadow-sm border-b border-gray-200 w-full">
-        <div className="px-4 sm:px-6 lg:px-8 flex items-center h-20 w-full">
-          <Link to="/" className="flex items-center mr-8">
-            <img
-              src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
-              alt="JyJ Essence Logo"
-              className="h-20 w-20 object-contain"
-            />
-            <span className="ml-3 text-3xl font-bold text-blue-600 hover:text-blue-700">JyJ Essence</span>
+  return (
+    <>
+      <header className="fixed top-0 left-0 w-full z-[1000] shadow-sm bg-[#f5f5f5] border-b border-gray-200 font-['Lato',sans-serif]">
+        <div className="relative flex items-center justify-between px-6 py-3">
+          <Link to="/" className="no-underline">
+            <h1 className="flex items-center gap-4 m-0 text-blue-600 text-3xl font-bold">
+              <img
+                src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
+                alt="JyJ Essence Logo"
+                className="h-16"
+              />
+              JyJ Essence
+            </h1>
           </Link>
 
-          <nav className="flex-1 flex justify-center space-x-8">
-            {usuario?.rol === 'ADMIN' && (
-              <Link to="/admin" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.admin')}</Link>
-            )}
-          </nav>
-
-          <div className="flex items-center space-x-4">
-            <Link to="/search" className="text-gray-700 hover:text-blue-600 flex items-center p-2">
-              <img
-                src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/search_mntlda.svg"
-                alt="Buscar"
-                className="h-6 w-6 object-contain"
+          {/* Search bar absolutely centered */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[500px]">
+            <form className="flex items-center bg-white border-2 border-blue-600 rounded-full px-2 py-1.5 shadow-md w-full transition-shadow hover:shadow-lg">
+              <input
+                type="text"
+                className="border-none outline-none flex-grow px-5 py-2 text-base bg-transparent text-gray-700 placeholder-gray-400"
+                placeholder={t('header.searchPlaceholder') || 'Buscar productos...'}
               />
-            </Link>
-            <Link to="/cart" className="text-gray-700 hover:text-blue-600 flex items-center p-2">
+              <button
+                type="submit"
+                className="bg-blue-600 border-none rounded-full w-10 h-10 flex justify-center items-center cursor-pointer text-white transition-colors hover:bg-blue-700"
+                aria-label="Buscar"
+              >
+                <img
+                  src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/search_mntlda.svg"
+                  alt="Buscar"
+                  className="w-5 h-5 invert"
+                />
+              </button>
+            </form>
+          </div>
+
+          <div className="flex items-center gap-5">
+            <div className="relative inline-block">
+              <button
+                className="bg-white border border-gray-300 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer transition-all hover:shadow-md hover:border-gray-400 h-12 min-w-[120px]"
+                onClick={() => setMostrarMenuIdioma(!mostrarMenuIdioma)}
+                aria-label="Cambiar idioma"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 0 20a15.3 15.3 0 0 1 0-20" />
+                </svg>
+                <span className="font-semibold text-gray-800 text-base">
+                  {i18n.language === 'es' ? 'Español' : 'English'}
+                </span>
+              </button>
+              {mostrarMenuIdioma && (
+                <div className="absolute top-full right-0 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[180px] z-[1001] mt-2 overflow-hidden">
+                  <button onClick={() => cambiarIdioma('es')} className="block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100">Español</button>
+                  <button onClick={() => cambiarIdioma('en')} className="block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100">English</button>
+                </div>
+              )}
+            </div>
+
+            <Link to="/cart" className="bg-white border border-gray-300 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer transition-all hover:shadow-md hover:border-gray-400 h-12 min-w-[120px] no-underline" aria-label="Carrito">
               <img
                 src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/carrito_idlvij.svg"
-                alt="Shopping Cart"
+                alt="Carrito"
                 className="h-6 w-6 object-contain"
               />
+              <span className="font-semibold text-gray-800 text-base">{t('nav.cart')}</span>
             </Link>
-            {estaAutenticado ? (
-              <Link to="/account" className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium flex items-center">
-                <img
-                  src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
-                  alt="Account"
-                  className="h-5 w-5 mr-2 object-contain"
-                />
-                {t('nav.myAccount')}
-              </Link>
-            ) : (
-              <>
-                <button
-                  onClick={() => navegar('/auth/login')}
-                  className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium flex items-center"
-                >
-                  <img
-                    src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
-                    alt="Account"
-                    className="h-5 w-5 mr-2 object-contain"
-                  />
-                  {t('nav.login')}
-                </button>
-                <button
-                  onClick={() => navegar('/auth/register')}
-                  className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 text-sm font-medium rounded-md"
-                >
-                  {t('nav.register')}
-                </button>
-              </>
-            )}
+
+            <button
+              className="bg-white border border-gray-300 rounded-full px-4 py-2 flex items-center gap-2 cursor-pointer transition-all hover:shadow-md hover:border-gray-400 h-12 min-w-[120px]"
+              onClick={() => setMostrarModalPerfil(true)}
+              aria-label="Menú de usuario"
+            >
+              <img
+                src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
+                alt="Perfil"
+                className="h-6 w-6 object-contain"
+              />
+              <span className="font-semibold text-gray-800 text-base">{nombrePerfil}</span>
+            </button>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {mostrarModalPerfil && (
+          <ModalPerfil 
+            onClose={() => setMostrarModalPerfil(false)}
+            estaAutenticado={estaAutenticado}
+            usuario={usuario}
+            navegar={navegar}
+            t={t}
+          />
+      )}
+    </>
   );
 };
 

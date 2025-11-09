@@ -7,6 +7,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
+import MiInformacion from './pages/account/MiInformacion';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
@@ -55,7 +56,11 @@ function AppLayout() {
               </div>
             </ProtectedRoute>
           } />
-          
+          <Route path="/account/mi-informacion" element={
+            <ProtectedRoute>
+              <MiInformacion />
+            </ProtectedRoute>
+          } />
           <Route path="/admin" element={
             <ProtectedRoute requiredRole="ADMIN">
               <div className="text-center">
@@ -76,7 +81,6 @@ function AppLayout() {
                 Catálogo de Productos
               </h1>
               <p className="text-gray-600">
-                Próximamente disponible
               </p>
             </div>
           } />

@@ -17,6 +17,13 @@ const resources = {
       "nav.logout": "Cerrar Sesión",
       "nav.admin": "Administración",
       
+      // Header
+      "header.searchPlaceholder": "Buscar productos...",
+      
+      // Perfil
+      "profile.general": "General",
+      "profile.help": "Ayuda",
+      
       // Autenticación
       "auth.email": "Correo Electrónico",
       "auth.password": "Contraseña",
@@ -195,6 +202,13 @@ const resources = {
       "nav.register": "Sign Up",
       "nav.logout": "Logout",
       "nav.admin": "Administration",
+      
+      // Header
+      "header.searchPlaceholder": "Search products...",
+      
+      // Profile
+      "profile.general": "General",
+      "profile.help": "Help",
       
       // Authentication
       "auth.email": "Email",

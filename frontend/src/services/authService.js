@@ -76,5 +76,20 @@ export const authService = {
   async consultarCedula(cedula) {
     const respuesta = await api.get(`/clientes/consulta-cedula/${cedula}`);
     return respuesta.data;
+  },
+
+  async addAddress(datosDireccion) {
+    const respuesta = await api.post('/clientes/direcciones', datosDireccion);
+    return respuesta.data;
+  },
+
+  async updateAddress(idDireccion, datosDireccion) {
+    const respuesta = await api.put(`/clientes/direcciones/${idDireccion}`, datosDireccion);
+    return respuesta.data;
+  },
+
+  async deleteAddress(idDireccion) {
+    const respuesta = await api.delete(`/clientes/direcciones/${idDireccion}`);
+    return respuesta.data;
   }
 };

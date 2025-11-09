@@ -353,6 +353,40 @@ class EcommerceFacade {
     }
   }
 
+  // ==========================================
+  // == OPERACIONES DE DIRECCIONES
+  // ==========================================
+
+  /**
+   * Agregar una dirección al perfil del usuario
+   */
+  async agregarDireccion(datosDireccion) {
+    try {
+      const response = await this.auth.addAddress(datosDireccion);
+      return response;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Error al agregar dirección');
+    }
+  }
+
+  async actualizarDireccion(idDireccion, datosDireccion) {
+    try {
+      const response = await this.auth.updateAddress(idDireccion, datosDireccion);
+      return response;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Error al actualizar dirección');
+    }
+  }
+
+  async eliminarDireccion(idDireccion) {
+    try {
+      await this.auth.deleteAddress(idDireccion);
+      return { success: true };
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Error al eliminar dirección');
+    }
+  }
+
   _getStockStatus(stock) {
     if (stock === 0) return 'agotado';
     if (stock < 5) return 'pocasUnidades';
