@@ -326,8 +326,9 @@ const Register = () => {
   };
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen flex font-['Lato',sans-serif] overflow-hidden z-40">
-      <div className="flex-[1.2] relative flex items-end p-10 overflow-hidden">
+    <div className="w-full min-h-screen grid grid-cols-1 md:grid-cols-2 font-['Lato',sans-serif] bg-white">
+      {/* Carrusel (solo md+) */}
+      <div className="relative hidden md:flex items-end p-10 overflow-hidden">
         {imagenesCarrusel.map((imagen, indice) => (
           <img
             key={indice}
@@ -355,16 +356,18 @@ const Register = () => {
           </div>
         </div>
       </div>
-      <div className="flex-1 flex flex-col bg-white p-4 overflow-y-auto relative">
+      {/* Columna del formulario */}
+      <div className="flex flex-col p-4 sm:p-6 md:p-8 relative">
         <button
           onClick={() => navegar('/')}
-          className="absolute top-8 right-8 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors z-10"
-          aria-label="Volver a inicio"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Ir a inicio"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-          </svg>
+          <img
+            src="https://res.cloudinary.com/drec8g03e/image/upload/v1762713857/inicio_x1zmf8.svg"
+            alt="Inicio"
+            className="w-6 h-6"
+          />
         </button>
         <div className="flex-grow flex flex-col justify-center w-full max-w-2xl mx-auto py-4">
           <div className="flex justify-center mb-4">
@@ -374,12 +377,12 @@ const Register = () => {
               className="h-28 w-28 object-contain"
             />
           </div>
-          <h1 className="font-['Lato',sans-serif] font-black text-3xl text-gray-800 text-center mb-6">
+          <h1 className="font-['Lato',sans-serif] font-black text-2xl sm:text-3xl text-gray-800 text-center mb-6">
             {t('auth.registerTitle')}
           </h1>
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
                 <label htmlFor="cedula" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.cedula')} *
                   {cedulaValidada && (
@@ -480,7 +483,7 @@ const Register = () => {
                 </select>
                 {errores.genero && <p className="mt-1 text-xs text-red-600">{errores.genero}</p>}
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label htmlFor="telefono" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.phone')} *
                 </label>
@@ -499,7 +502,7 @@ const Register = () => {
                 />
                 {errores.telefono && <p className="mt-1 text-xs text-red-600">{errores.telefono}</p>}
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -582,7 +585,7 @@ const Register = () => {
                       onChange={handleDireccionChange}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="sm:col-span-2">
                     <label htmlFor="senas" className="block mb-1 font-bold text-gray-700 text-sm">
                       {t('address.directions')} *
                     </label>
@@ -670,7 +673,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={cargando || !cedulaValidada}
-              className="w-full py-3 px-4 rounded-lg border-none bg-blue-600 text-white text-base font-bold cursor-pointer transition-all shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-4"
+              className="w-full py-3 px-4 rounded-lg border-none bg-blue-600 text-white text-base sm:text-lg font-bold cursor-pointer transition-colors shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-2"
             >
               {cargando ? t('common.loading') : t('auth.register')}
             </button>

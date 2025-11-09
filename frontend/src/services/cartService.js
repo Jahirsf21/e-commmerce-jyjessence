@@ -14,7 +14,7 @@ export const cartService = {
     return respuesta.data;
   },
 
-  async updateItem(idProducto, cantidad) {
+  async updateQuantity(idProducto, cantidad) {
     const respuesta = await api.put('/carrito/modificar', { 
       productoId: idProducto, 
       cantidad 

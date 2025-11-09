@@ -121,7 +121,19 @@ const MiInformacion = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-24 px-4 pb-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto relative">
+        {/* Botón de inicio en la esquina superior derecha */}
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-0 right-0 mt-2 mr-2 bg-white rounded-full p-2 shadow hover:bg-gray-100 transition-colors"
+          aria-label="Ir al inicio"
+        >
+          <img
+            src="https://res.cloudinary.com/drec8g03e/image/upload/v1762713857/inicio_x1zmf8.svg"
+            alt="Inicio"
+            className="w-7 h-7"
+          />
+        </button>
         <h1 className="text-3xl font-bold mb-8 text-gray-800">Mi Información</h1>
         
         {loading && (

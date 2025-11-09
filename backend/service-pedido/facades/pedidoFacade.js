@@ -1,18 +1,24 @@
 import prisma from '../../database/config/prisma.js';
 import Carrito from '../patterns/Carrito.js';
 import CarritoCaretaker from '../patterns/CarritoCaretaker.js';
+import axios from 'axios';
 
 class PedidoFacade {
   constructor() {
-
     this.caretakers = new Map();
+    this.paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || 'http://localhost:3003';
   }
 
   async _getCarritoFromDB(clienteId) {
+    console.log('🔍 _getCarritoFromDB - buscando items para clienteId:', clienteId);
+    
     const items = await prisma.carritoItem.findMany({
       where: { clienteId },
       include: { producto: true }
     });
+
+    console.log('🔍 Items encontrados en DB:', items.length);
+    console.log('🔍 Items detallados:', JSON.stringify(items, null, 2));
 
     const carrito = new Carrito();
     carrito.items = items.map(item => ({
@@ -22,6 +28,7 @@ class PedidoFacade {
       precioUnitario: item.precioUnitario
     }));
 
+    console.log('🔍 Carrito.items después de mapear:', carrito.items);
     return carrito;
   }
 
@@ -118,12 +125,18 @@ class PedidoFacade {
   }
 
   async verCarrito(clienteId) {
+    console.log('📦 verCarrito - clienteId:', clienteId);
     const carrito = await this._getCarritoFromDB(clienteId);
-    return {
+    console.log('📦 Items del carrito:', carrito.getItems());
+    
+    const resultado = {
       items: carrito.getItems(),
       total: carrito.calcularTotal(),
       cantidadItems: carrito.getItems().length
     };
+    
+    console.log('📦 Resultado final:', JSON.stringify(resultado, null, 2));
+    return resultado;
   }
 
   async deshacerCarrito(clienteId) {
@@ -157,7 +170,7 @@ class PedidoFacade {
   }
 
 
-  async finalizarCompra(clienteId) {
+  async finalizarCompra(clienteId, token) {
     const carrito = await this._getCarritoFromDB(clienteId);
     const items = carrito.getItems();
 
@@ -165,6 +178,10 @@ class PedidoFacade {
       throw new Error('El carrito está vacío');
     }
 
+    // Calcular monto total antes de crear el pedido
+    const montoTotal = carrito.calcularTotal();
+
+    // Validar stock
     for (const item of items) {
       const producto = await prisma.producto.findUnique({
         where: { idProducto: item.productoId }
@@ -175,29 +192,88 @@ class PedidoFacade {
       }
     }
 
-    const pedido = await prisma.$transaction(async (prisma) => {
-      const nuevoPedido = await prisma.pedido.create({
-        data: {
-          clienteId: clienteId,
-          estado: 'Pendiente',
-          articulos: {
-            create: items.map(item => ({
-              productoId: item.productoId,
-              cantidad: item.cantidad,
-              precioUnitario: item.precioUnitario
-            }))
+    // Crear el pedido en estado pendiente (sin reducir stock aún)
+    const pedido = await prisma.pedido.create({
+      data: {
+        clienteId: clienteId,
+        estado: 'Pendiente',
+        montoTotal: montoTotal,
+        estadoPago: 'pendiente',
+        articulos: {
+          create: items.map(item => ({
+            productoId: item.productoId,
+            cantidad: item.cantidad,
+            precioUnitario: item.precioUnitario
+          }))
+        }
+      },
+      include: {
+        articulos: {
+          include: {
+            producto: true
           }
         },
-        include: {
-          articulos: {
-            include: {
-              producto: true
-            }
+        cliente: true
+      }
+    });
+
+    try {
+      // Llamar al servicio de pagos para crear el checkout
+      const paymentResponse = await axios.post(
+        `${this.paymentServiceUrl}/api/pagos/checkout`,
+        { pedidoId: pedido.idPedido },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
+        }
+      );
+
+      // Retornar el pedido con la URL de checkout
+      return {
+        pedido: paymentResponse.data.pedido,
+        checkoutUrl: paymentResponse.data.checkoutUrl,
+        paymentId: paymentResponse.data.paymentId
+      };
+    } catch (error) {
+      // Si falla la creación del checkout, cancelar el pedido
+      await prisma.pedido.update({
+        where: { idPedido: pedido.idPedido },
+        data: { 
+          estado: 'Cancelado',
+          estadoPago: 'fallido'
         }
       });
 
-      for (const item of items) {
+      throw new Error(
+        error.response?.data?.error || 
+        'Error al crear sesión de pago'
+      );
+    }
+  }
+
+  async confirmarPago(pedidoId) {
+    // Confirmar pago y reducir stock (llamado por el webhook)
+    const pedido = await prisma.pedido.findUnique({
+      where: { idPedido: pedidoId },
+      include: {
+        articulos: true
+      }
+    });
+
+    if (!pedido) {
+      throw new Error('Pedido no encontrado');
+    }
+
+    if (pedido.estadoPago === 'pagado') {
+      return pedido; // Ya fue confirmado
+    }
+
+    // Reducir stock y actualizar estado en una transacción
+    const pedidoConfirmado = await prisma.$transaction(async (prisma) => {
+      // Reducir stock de productos
+      for (const item of pedido.articulos) {
         await prisma.producto.update({
           where: { idProducto: item.productoId },
           data: {
@@ -208,16 +284,31 @@ class PedidoFacade {
         });
       }
 
-      await prisma.carritoItem.deleteMany({
-        where: { clienteId }
+      // Actualizar pedido
+      return await prisma.pedido.update({
+        where: { idPedido: pedidoId },
+        data: {
+          estado: 'confirmado',
+          estadoPago: 'pagado'
+        },
+        include: {
+          articulos: {
+            include: {
+              producto: true
+            }
+          }
+        }
       });
-
-      return nuevoPedido;
     });
 
-    this._getCaretaker(clienteId).limpiar();
+    // Limpiar carrito del cliente
+    await prisma.carritoItem.deleteMany({
+      where: { clienteId: pedido.clienteId }
+    });
 
-    return pedido;
+    this._getCaretaker(pedido.clienteId).limpiar();
+
+    return pedidoConfirmado;
   }
 
   async obtenerHistorialPedidos(clienteId) {

@@ -62,7 +62,11 @@ app.delete('/api/carrito/eliminar/:productoId', authMiddleware, async (req, res)
 app.get('/api/carrito', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
+    console.log('🛒 GET /api/carrito - clienteId:', clienteId);
+    
     const carrito = await PedidoFacade.verCarrito(clienteId);
+    console.log('🛒 Carrito obtenido:', JSON.stringify(carrito, null, 2));
+    
     res.status(200).json(carrito);
   } catch (error) {
     console.error('Error al obtener carrito:', error);
@@ -99,10 +103,14 @@ app.post('/api/carrito/rehacer', authMiddleware, async (req, res) => {
 app.post('/api/pedidos/checkout', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const pedido = await PedidoFacade.finalizarCompra(clienteId);
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    const resultado = await PedidoFacade.finalizarCompra(clienteId, token);
     res.status(201).json({ 
       mensaje: 'Pedido creado exitosamente', 
-      pedido 
+      pedido: resultado.pedido,
+      checkoutUrl: resultado.checkoutUrl,
+      paymentId: resultado.paymentId
     });
   } catch (error) {
     console.error('Error al finalizar compra:', error);

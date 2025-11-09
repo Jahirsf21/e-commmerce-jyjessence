@@ -66,12 +66,20 @@ model CarritoItem {
 }
 
 model Pedido {
-  idPedido  String             @id @default(cuid())
-  fecha     DateTime           @default(now())
-  estado    String
-  clienteId String
-  articulos ArticuloDePedido[]
-  cliente   Cliente            @relation(fields: [clienteId], references: [idCliente])
+  idPedido        String             @id @default(cuid())
+  fecha           DateTime           @default(now())
+  estado          String
+  clienteId       String
+  montoTotal      Float              @default(0)
+  metodoPago      String?            // "onvo_pay", "efectivo", etc.
+  estadoPago      String             @default("pendiente") // "pendiente", "pagado", "fallido", "reembolsado"
+  onvoPaymentId   String?            @unique // ID de pago de Onvo Pay
+  onvoCheckoutUrl String?            // URL de checkout de Onvo Pay
+  articulos       ArticuloDePedido[]
+  cliente         Cliente            @relation(fields: [clienteId], references: [idCliente])
+  
+  @@index([estadoPago])
+  @@index([onvoPaymentId])
 }
 
 model ArticuloDePedido {

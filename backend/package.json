@@ -7,11 +7,12 @@
     "database",
     "service-clientes",
     "service-catalogo",
-    "service-pedido"
+    "service-pedido",
+    "service-pagos"
   ],
   "scripts": {
-    "build": "prisma generate",
-    "postinstall": "prisma generate"
+    "build": "cd database && prisma generate",
+    "postinstall": "cd database && prisma generate"
   },
   "dependencies": {
     "express": "^4.21.2",

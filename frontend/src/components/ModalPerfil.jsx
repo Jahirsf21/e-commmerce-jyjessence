@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import Swal from 'sweetalert2';
 
 const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, t }) => {
+  // Detectar si no está en la página principal
+  const location = window.location.pathname;
+  const noEsHome = location !== '/' && location !== '/home';
   const { cerrarSesion } = useAuth();
   const [usuario, setUsuario] = useState(usuarioProp || null);
   const [loading, setLoading] = useState(false);
@@ -12,6 +15,7 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
   const [direccionEdit, setDireccionEdit] = useState('');
   const [selectedDireccion, setSelectedDireccion] = useState('');
   const [password, setPassword] = useState('');
+  const modalRef = useRef(null);
 
   useEffect(() => {
     if (estaAutenticado) {
@@ -32,6 +36,51 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
         .finally(() => setLoading(false));
     }
   }, [estaAutenticado]);
+
+  // Focus trap - mantener el foco dentro del modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Tab') {
+        const focusableElements = modalRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        
+        if (!focusableElements || focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          // Si Shift+Tab en el primer elemento, ir al último
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Si Tab en el último elemento, ir al primero
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+
+      // Cerrar modal con Escape
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // Enfocar el primer elemento al abrir el modal
+    const firstFocusable = modalRef.current?.querySelector('button');
+    firstFocusable?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   const manejarCierreSesion = () => {
     cerrarSesion();
@@ -121,8 +170,11 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
       onClick={onClose}
     >
       <div 
+        ref={modalRef}
         className="w-full max-w-[500px] bg-[#F9F6F2] rounded-2xl shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <header className="flex items-center px-5 py-4 gap-4 justify-between">
           <h1 className="text-2xl font-bold text-gray-800 m-0">
@@ -141,46 +193,55 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
         </header>
 
         <main className="px-5 pb-5 flex flex-col gap-4">
+          {noEsHome && (
+            <button
+              onClick={() => { navegar('/'); onClose(); }}
+              className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
+            >
+              <div className="flex items-center gap-4 text-base text-gray-800">
+                <img
+                  src="https://res.cloudinary.com/drec8g03e/image/upload/v1762713857/inicio_x1zmf8.svg"
+                  alt="Inicio"
+                  className="w-6 h-6"
+                />
+                <span>Inicio</span>
+              </div>
+            </button>
+          )}
           {!estaAutenticado ? (
             <>
-              <div className="border-t border-gray-300 pt-4">
-                <button
-                  onClick={irALogin}
-                  className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
-                >
-                  <div className="flex items-center gap-4 text-base text-gray-800">
-                    <img
-                      src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
-                      alt=""
-                      className="w-6 h-6"
-                    />
-                    <span>{t('nav.login') || 'Iniciar Sesión'}</span>
-                  </div>
-                </button>
-              </div>
+              <button
+                onClick={irALogin}
+                className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
+              >
+                <div className="flex items-center gap-4 text-base text-gray-800">
+                  <img
+                    src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
+                    alt=""
+                    className="w-6 h-6"
+                  />
+                  <span>{t('nav.login') || 'Iniciar Sesión'}</span>
+                </div>
+              </button>
 
-              <div className="border-t border-gray-300 pt-4">
-                <button
-                  onClick={irARegistro}
-                  className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
-                >
-                  <div className="flex items-center gap-4 text-base text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="8.5" cy="7" r="4"></circle>
-                      <line x1="20" y1="8" x2="20" y2="14"></line>
-                      <line x1="23" y1="11" x2="17" y2="11"></line>
-                    </svg>
-                    <span>{t('nav.register') || 'Crear Cuenta'}</span>
-                  </div>
-                </button>
-              </div>
+              <button
+                onClick={irARegistro}
+                className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
+              >
+                <div className="flex items-center gap-4 text-base text-gray-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                  </svg>
+                  <span>{t('nav.register') || 'Crear Cuenta'}</span>
+                </div>
+              </button>
 
-              <div className="border-t border-gray-300 pt-4">
-                <h2 className="text-base font-semibold text-gray-600 m-0 mb-2.5 uppercase px-2.5">
-                  {t('profile.general') || 'General'}
-                </h2>
-              </div>
+              <h2 className="text-base font-semibold text-gray-600 m-0 mb-2.5 uppercase px-2.5">
+                {t('profile.general') || 'General'}
+              </h2>
             </>
           ) : (
             <>
@@ -190,10 +251,11 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
                   className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
                 >
                   <div className="flex items-center gap-4 text-base text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
+                    <img
+                      src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
+                      alt="Perfil"
+                      className="w-6 h-6"
+                    />
                     <span>Mi Información</span>
                   </div>
                 </button>

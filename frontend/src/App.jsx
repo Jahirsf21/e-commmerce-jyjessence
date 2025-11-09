@@ -8,6 +8,12 @@ import Register from './pages/auth/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import MiInformacion from './pages/account/MiInformacion';
+import Checkout from './pages/cart/Checkout';
+import CheckoutSuccess from './pages/cart/CheckoutSuccess';
+import CheckoutCancel from './pages/cart/CheckoutCancel';
+import Products from './pages/products/Products';
+import Cart from './pages/cart/Cart';
+import Orders from './pages/cart/Orders';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
@@ -74,27 +80,29 @@ function AppLayout() {
             </ProtectedRoute>
           } />
           
-          {/* Rutas de catálogo y carrito (públicas por ahora) */}
-          <Route path="/products" element={
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-blue-600 mb-8">
-                Catálogo de Productos
-              </h1>
-              <p className="text-gray-600">
-              </p>
-            </div>
-          } />
+          {/* Rutas de catálogo y carrito */}
+          <Route path="/products" element={<Products />} />
           
           <Route path="/cart" element={
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-blue-600 mb-8">
-                Carrito de Compras
-              </h1>
-              <p className="text-gray-600">
-                Tu carrito está vacío
-              </p>
-            </div>
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
           } />
+          
+          <Route path="/orders" element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          } />
+          
+          {/* Rutas de checkout */}
+          <Route path="/checkout" element={
+            <ProtectedRoute>
+              <Checkout />
+            </ProtectedRoute>
+          } />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
+          <Route path="/checkout/cancel" element={<CheckoutCancel />} />
           
           {/* Redirección por defecto */}
           <Route path="*" element={<Navigate to="/" replace />} />

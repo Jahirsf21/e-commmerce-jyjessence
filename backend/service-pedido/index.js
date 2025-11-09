@@ -1,9 +1,12 @@
+import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import authMiddleware from '../shared/middleware/auth.js';
 import isAdmin from '../shared/middleware/admin.js';
 import PedidoFacade from './facades/pedidoFacade.js';
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 
@@ -46,7 +49,7 @@ app.delete('/api/carrito/eliminar/:productoId', authMiddleware, async (req, res)
     const { productoId } = req.params;
     const clienteId = req.user.idCliente;
 
-    const items = PedidoFacade.eliminarDelCarrito(clienteId, productoId);
+    const items = await PedidoFacade.eliminarDelCarrito(clienteId, productoId);
     res.status(200).json({ mensaje: 'Producto eliminado del carrito', items });
   } catch (error) {
     console.error('Error al eliminar del carrito:', error);
@@ -57,7 +60,11 @@ app.delete('/api/carrito/eliminar/:productoId', authMiddleware, async (req, res)
 app.get('/api/carrito', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const carrito = PedidoFacade.verCarrito(clienteId);
+    console.log('🛒 GET /api/carrito - clienteId:', clienteId);
+    
+    const carrito = await PedidoFacade.verCarrito(clienteId);
+    console.log('🛒 Carrito obtenido:', JSON.stringify(carrito, null, 2));
+    
     res.status(200).json(carrito);
   } catch (error) {
     console.error('Error al obtener carrito:', error);
@@ -68,7 +75,7 @@ app.get('/api/carrito', authMiddleware, async (req, res) => {
 app.post('/api/carrito/deshacer', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const items = PedidoFacade.deshacerCarrito(clienteId);
+    const items = await PedidoFacade.deshacerCarrito(clienteId);
     res.status(200).json({ mensaje: 'Acción deshecha', items });
   } catch (error) {
     console.error('Error al deshacer:', error);
@@ -79,7 +86,7 @@ app.post('/api/carrito/deshacer', authMiddleware, async (req, res) => {
 app.post('/api/carrito/rehacer', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const items = PedidoFacade.rehacerCarrito(clienteId);
+    const items = await PedidoFacade.rehacerCarrito(clienteId);
     res.status(200).json({ mensaje: 'Acción rehecha', items });
   } catch (error) {
     console.error('Error al rehacer:', error);
@@ -91,11 +98,14 @@ app.post('/api/carrito/rehacer', authMiddleware, async (req, res) => {
 app.post('/api/pedidos/checkout', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const pedido = await PedidoFacade.finalizarCompra(clienteId);
-    res.status(201).json({ 
-      mensaje: 'Pedido creado exitosamente', 
-      pedido 
-    });
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Token no proporcionado' });
+    }
+    
+    const result = await PedidoFacade.finalizarCompra(clienteId, token);
+    res.status(201).json(result);
   } catch (error) {
     console.error('Error al finalizar compra:', error);
     res.status(500).json({ error: error.message || 'Error al finalizar compra' });
