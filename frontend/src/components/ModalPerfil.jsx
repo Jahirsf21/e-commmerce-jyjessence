@@ -130,10 +130,10 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
           </h1>
           <button
             onClick={onClose}
-            className="bg-none border-none cursor-pointer p-0 text-gray-500 flex items-center justify-center"
+            className="bg-none border-none cursor-pointer p-2 text-gray-500 flex items-center justify-center transition-all hover:bg-gray-200 rounded-full"
             aria-label="Cerrar modal"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -198,6 +198,20 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
                   </div>
                 </button>
 
+                <button
+                  onClick={manejarCierreSesion}
+                  className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
+                >
+                  <div className="flex items-center gap-4 text-base text-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16 17 21 12 16 7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span>{t('nav.logout') || 'Cerrar Sesión'}</span>
+                  </div>
+                </button>
+
                 <h2 className="text-base font-semibold text-gray-600 m-0 mb-2.5 uppercase px-2.5 mt-4">
                   {t('profile.general') || 'General'}
                 </h2>
@@ -212,19 +226,6 @@ const ModalPerfil = ({ onClose, estaAutenticado, usuario: usuarioProp, navegar, 
                       <line x1="12" y1="22.08" x2="12" y2="12"></line>
                     </svg>
                     <span>{t('nav.orders') || 'Mis Pedidos'}</span>
-                  </div>
-                </button>
-                <button
-                  onClick={manejarCierreSesion}
-                  className="flex items-center w-full p-3 bg-none border-none text-left rounded-lg cursor-pointer transition-colors hover:bg-gray-200"
-                >
-                  <div className="flex items-center gap-4 text-base text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                      <polyline points="16 17 21 12 16 7"></polyline>
-                      <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
-                    <span>{t('nav.logout') || 'Cerrar Sesión'}</span>
                   </div>
                 </button>
               </div>

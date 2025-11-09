@@ -74,9 +74,23 @@ const Header = () => {
                 </span>
               </button>
               {mostrarMenuIdioma && (
-                <div className="absolute top-full right-0 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[180px] z-[1001] mt-2 overflow-hidden">
-                  <button onClick={() => cambiarIdioma('es')} className="block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100">Español</button>
-                  <button onClick={() => cambiarIdioma('en')} className="block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100">English</button>
+                <div className="absolute top-full left-0 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[180px] z-[1001] mt-2 overflow-hidden">
+                  <button 
+                    onClick={() => cambiarIdioma('es')} 
+                    className={`block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100 ${
+                      i18n.language === 'es' ? 'bg-blue-50 font-semibold' : ''
+                    }`}
+                  >
+                    {i18n.language === 'es' && '✓ '}Español
+                  </button>
+                  <button 
+                    onClick={() => cambiarIdioma('en')} 
+                    className={`block w-full px-5 py-3 text-left bg-none border-none text-gray-700 text-base cursor-pointer transition-colors hover:bg-gray-100 ${
+                      i18n.language === 'en' ? 'bg-blue-50 font-semibold' : ''
+                    }`}
+                  >
+                    {i18n.language === 'en' && '✓ '}English
+                  </button>
                 </div>
               )}
             </div>

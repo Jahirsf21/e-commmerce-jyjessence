@@ -137,7 +137,7 @@ const MiInformacion = () => {
             <input type="password" placeholder="Nueva contraseña" value={password} onChange={e => setPassword(e.target.value)} className="border rounded px-3 py-2 w-full" disabled={loading} />
             <button onClick={() => handleUpdate('contrasena', password)} className="mt-2 bg-blue-600 text-white px-4 py-2 rounded" disabled={loading || !password}>Restaurar</button>
           </div>
-          <div className="col-span-1 md:col-span-2">
+          <div>
             <h2 className="text-xl font-semibold mb-4">Direcciones</h2>
             
             {/* Lista de direcciones */}
