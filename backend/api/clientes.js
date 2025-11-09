@@ -1,19 +1,16 @@
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import express from 'express';
 import cors from 'cors';
 import authMiddleware from '../shared/middleware/auth.js';
 import isAdmin from '../shared/middleware/admin.js';
-import ClientFacade from './facades/clientFacade.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, '../database/.env') });
+import ClientFacade from '../service-clientes/facades/clientFacade.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ==========================================
+// ==      RUTAS PÚBLICAS (SIN TOKEN)      ==
+// ==========================================
 
 app.get('/api/clientes/consulta-cedula/:cedula', async (req, res) => {
   try {
@@ -46,27 +43,17 @@ app.post('/api/clientes/registro', async (req, res) => {
 app.post('/api/clientes/login', async (req, res) => {
   try {
     const resultado = await ClientFacade.autenticar(req.body.email, req.body.contrasena);
+    if (!resultado) return res.status(401).json({ error: 'Credenciales inválidas.' });
     res.status(200).json(resultado);
   } catch (error) {
     console.error("Error al iniciar sesión:", error);
-    
-    if (error.code === 'EMAIL_NO_ENCONTRADO') {
-      return res.status(404).json({ 
-        error: error.message,
-        codigo: 'EMAIL_NO_ENCONTRADO'
-      });
-    }
-    
-    if (error.code === 'CONTRASENA_INCORRECTA') {
-      return res.status(401).json({ 
-        error: error.message,
-        codigo: 'CONTRASENA_INCORRECTA'
-      });
-    }
-    
     res.status(500).json({ error: 'No se pudo iniciar sesión.' });
   }
 });
+
+// =========================================================
+// == RUTAS PROTEGIDAS PARA USUARIOS AUTENTICADOS (TOKEN) ==
+// =========================================================
 
 app.get('/api/clientes/perfil', authMiddleware, async (req, res) => {
   try {
@@ -101,6 +88,10 @@ app.delete('/api/clientes/perfil', authMiddleware, async (req, res) => {
   }
 });
 
+// ===================================================================
+// == RUTAS PROTEGIDAS SOLO PARA ADMINISTRADORES (TOKEN + ROL ADMIN)==
+// ===================================================================
+
 app.get('/api/clientes', authMiddleware, isAdmin, async (req, res) => {
   try {
     const clientes = await ClientFacade.listarTodos();
@@ -123,7 +114,7 @@ app.get('/api/clientes/:id', authMiddleware, isAdmin, async (req, res) => {
 });
 
 // ==========================================
-// == ENDPOINTS DE DIRECCIONES
+// ==      RUTAS DE DIRECCIONES (TOKEN)    ==
 // ==========================================
 
 app.post('/api/clientes/direcciones', authMiddleware, async (req, res) => {
@@ -177,8 +168,5 @@ app.delete('/api/clientes/direcciones/:id', authMiddleware, async (req, res) => 
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Servidor de Clientes escuchando en http://localhost:${PORT}`);
-});
+// Exportar para Vercel
+export default app;

@@ -1,0 +1,690 @@
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import ecommerceFacade from '../../patterns/EcommerceFacade';
+import { useAuth } from '../../context/AuthContext';
+
+const Register = () => {
+  const { t } = useTranslation();
+  const navegar = useNavigate();
+  const { iniciarSesion } = useAuth();
+  
+  const [datosFormulario, setDatosFormulario] = useState({
+    cedula: '',
+    nombre: '',
+    apellidos: '',
+    email: '',
+    genero: 'Unisex',
+    telefono: '',
+    password: '',
+    confirmPassword: ''
+  });
+  
+  const [datosDireccion, setDatosDireccion] = useState({
+    provincia: '',
+    canton: '',
+    distrito: '',
+    barrio: '',
+    senas: '',
+    codigoPostal: '',
+    referencia: ''
+  });
+  
+  const [cargando, setCargando] = useState(false);
+  const [cargandoCedula, setCargandoCedula] = useState(false);
+  const [errores, setErrores] = useState({});
+  const [cedulaValidada, setCedulaValidada] = useState(false);
+  const [agregarDireccion, setAgregarDireccion] = useState(false);
+  const [indiceCarrusel, setIndiceCarrusel] = useState(0);
+  
+  const imagenesCarrusel = [
+    {
+      url: 'https://res.cloudinary.com/drec8g03e/image/upload/v1762667317/perfumes_hrhw7k.jpg',
+      texto: 'Descubre tu esencia perfecta'
+    },
+    {
+      url: 'https://res.cloudinary.com/drec8g03e/image/upload/v1762667317/perfumes1_qccydw.jpg',
+      texto: 'Fragancias exclusivas para ti'
+    },
+    {
+      url: 'https://res.cloudinary.com/drec8g03e/image/upload/v1762667317/perfumes2_g64pal.jpg',
+      texto: 'Elegancia en cada gota'
+    }
+  ];
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      setIndiceCarrusel((prevIndice) => (prevIndice + 1) % imagenesCarrusel.length);
+    }, 5000);
+    
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Función para validar formato de cédula costarricense
+  const validarFormatoCedula = (cedula) => {
+    // Debe tener exactamente 9 dígitos (sin guiones)
+    const cleaned = cedula.replace(/\D/g, '');
+    return cleaned.length === 9;
+  };
+
+  // Función para formatear cédula mientras el usuario escribe
+  const formatCedula = (value) => {
+    const limpia = value.replace(/\D/g, '');
+    
+    if (limpia.length <= 1) {
+      return limpia;
+    } else if (limpia.length <= 5) {
+      return `${limpia.slice(0, 1)}-${limpia.slice(1)}`;
+    } else {
+      return `${limpia.slice(0, 1)}-${limpia.slice(1, 5)}-${limpia.slice(5, 9)}`;
+    }
+  };
+
+  const consultarDatosCedula = async (cedula) => {
+    setCargandoCedula(true);
+    
+    try {
+      const cedulaLimpia = cedula.replace(/\D/g, '');
+      
+      const datos = await ecommerceFacade.consultarCedula(cedulaLimpia);
+      
+      if (!datos || !datos.valida) {
+        throw new Error('Cédula no válida o no encontrada');
+      }
+      
+      setDatosFormulario(prev => ({
+        ...prev,
+        nombre: datos.nombre || '',
+        apellidos: datos.apellidos || ''
+      }));
+      
+      setCedulaValidada(true);
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Cédula validada!',
+        text: t('message.cedulaValidated'),
+        confirmButtonColor: '#2563eb',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      
+    } catch (error) {
+      console.error('Error consultando cédula:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error de validación',
+        text: error.message || t('message.cedulaValidationError'),
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'Entendido'
+      });
+      setCedulaValidada(false);
+    } finally {
+      setCargandoCedula(false);
+    }
+  };
+
+  const manejarCambioCedula = (e) => {
+    const cedulaFormateada = formatCedula(e.target.value);
+    
+    setDatosFormulario(prev => ({
+      ...prev,
+      cedula: cedulaFormateada
+    }));
+    
+    if (cedulaValidada) {
+      setCedulaValidada(false);
+      setDatosFormulario(prev => ({
+        ...prev,
+        nombre: '',
+        apellidos: ''
+      }));
+    }
+    
+    if (validarFormatoCedula(cedulaFormateada)) {
+      consultarDatosCedula(cedulaFormateada);
+    }
+  };
+
+  const validateForm = () => {
+    const nuevosErrores = {};
+    
+    if (!datosFormulario.cedula) {
+      nuevosErrores.cedula = t('auth.cedulaRequired');
+    } else if (!validarFormatoCedula(datosFormulario.cedula)) {
+      nuevosErrores.cedula = t('auth.cedulaInvalidFormat');
+    }
+    
+    if (!datosFormulario.nombre) {
+      nuevosErrores.nombre = t('auth.nameRequired');
+    }
+    
+    if (!datosFormulario.apellidos) {
+      nuevosErrores.apellidos = t('auth.lastNameRequired');
+    }
+    
+    if (!datosFormulario.email) {
+      nuevosErrores.email = t('auth.emailRequired');
+    } else if (!/\S+@\S+\.\S+/.test(datosFormulario.email)) {
+      nuevosErrores.email = t('auth.emailInvalid');
+    }
+    
+    if (!datosFormulario.genero) {
+      nuevosErrores.genero = t('auth.genderRequired');
+    }
+    
+    if (!datosFormulario.telefono) {
+      nuevosErrores.telefono = t('auth.phoneRequired');
+    } else if (!/^\d{4}-\d{4}$/.test(datosFormulario.telefono)) {
+      nuevosErrores.telefono = t('auth.phoneInvalidFormat');
+    }
+    
+    if (!datosFormulario.password) {
+      nuevosErrores.password = t('auth.passwordRequired');
+    } else if (datosFormulario.password.length < 6) {
+      nuevosErrores.password = t('auth.passwordMinLength');
+    }
+    
+    if (!datosFormulario.confirmPassword) {
+      nuevosErrores.confirmPassword = t('auth.confirmPasswordRequired');
+    } else if (datosFormulario.password !== datosFormulario.confirmPassword) {
+      nuevosErrores.confirmPassword = t('auth.passwordMismatch');
+    }
+    
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'telefono') {
+      const limpia = value.replace(/\D/g, '');
+      const formateado = limpia.length <= 4 ? limpia : `${limpia.slice(0, 4)}-${limpia.slice(4, 8)}`;
+      setDatosFormulario(prev => ({
+        ...prev,
+        [name]: formateado
+      }));
+    } else {
+      setDatosFormulario(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    if (errores[name]) {
+      setErrores(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleDireccionChange = (e) => {
+    const { name, value } = e.target;
+    setDatosDireccion(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    if (errores[name]) {
+      setErrores(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setCargando(true);
+    
+    try {
+      const cedulaLimpia = datosFormulario.cedula.replace(/\D/g, '');
+      const telefonoLimpio = datosFormulario.telefono.replace(/\D/g, '');
+      
+      const datosRegistro = {
+        cedula: cedulaLimpia,
+        nombre: datosFormulario.nombre,
+        apellido: datosFormulario.apellidos,
+        email: datosFormulario.email,
+        genero: datosFormulario.genero,
+        telefono: telefonoLimpio,
+        contrasena: datosFormulario.password
+      };
+
+      // Agregar dirección solo si el usuario marcó el checkbox
+      if (agregarDireccion) {
+        datosRegistro.direccion = datosDireccion;
+      }
+      
+      await ecommerceFacade.registerUser(datosRegistro);
+      
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Registro exitoso!',
+        text: t('message.registerSuccess'),
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'Ir a iniciar sesión'
+      });
+      
+      navegar('/auth/login');
+      
+    } catch (error) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error en el registro',
+        text: error.message || t('message.registerError'),
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: 'Intentar de nuevo'
+      });
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  return (
+    <div className="fixed top-0 left-0 w-screen h-screen flex font-['Lato',sans-serif] overflow-hidden z-40">
+      {/* Panel de Imagen */}
+      <div className="flex-[1.2] relative flex items-end p-10 overflow-hidden">
+        {imagenesCarrusel.map((imagen, indice) => (
+          <img
+            key={indice}
+            src={imagen.url}
+            alt={`Perfume ${indice + 1}`}
+            className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              indice === indiceCarrusel ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ))}
+        
+        <div className="relative z-10">
+          <h2 className="font-['Merriweather',serif] font-bold text-4xl text-white mb-4 drop-shadow-lg">
+            {imagenesCarrusel[indiceCarrusel].texto}
+          </h2>
+          <div className="flex gap-3">
+            {imagenesCarrusel.map((_, indice) => (
+              <span
+                key={indice}
+                onClick={() => setIndiceCarrusel(indice)}
+                className={`w-3.5 h-3.5 rounded-full border-2 border-white cursor-pointer transition-all ${
+                  indice === indiceCarrusel ? 'bg-white' : 'bg-white/30'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Panel de Formulario */}
+      <div className="flex-1 flex flex-col bg-white p-4 overflow-y-auto relative">
+        {/* Botón Home */}
+        <button
+          onClick={() => navegar('/')}
+          className="absolute top-8 right-8 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors z-10"
+          aria-label="Volver a inicio"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </button>
+
+        {/* Contenido del Formulario */}
+        <div className="flex-grow flex flex-col justify-center w-full max-w-2xl mx-auto py-4">
+          {/* Logo */}
+          <div className="flex justify-center mb-4">
+            <img
+              src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
+              alt="JyJ Essence Logo"
+              className="h-28 w-28 object-contain"
+            />
+          </div>
+
+          <h1 className="font-['Lato',sans-serif] font-black text-3xl text-gray-800 text-center mb-6">
+            {t('auth.registerTitle')}
+          </h1>
+          
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label htmlFor="cedula" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.cedula')} *
+                  {cargandoCedula && (
+                    <span className="ml-2 text-blue-600 text-xs">
+                      ⏳ {t('auth.validatingCedula')}
+                    </span>
+                  )}
+                  {cedulaValidada && (
+                    <span className="ml-2 text-green-600 text-xs">
+                      ✓ {t('auth.cedulaValidated')}
+                    </span>
+                  )}
+                </label>
+                <input
+                  id="cedula"
+                  name="cedula"
+                  type="text"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.cedula ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="X-XXXX-XXXX"
+                  value={datosFormulario.cedula}
+                  onChange={manejarCambioCedula}
+                  maxLength={11}
+                />
+                {errores.cedula && <p className="mt-1 text-xs text-red-600">{errores.cedula}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="nombre" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.name')} *
+                </label>
+                <input
+                  id="nombre"
+                  name="nombre"
+                  type="text"
+                  required
+                  disabled={cedulaValidada}
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    cedulaValidada ? 'opacity-60' : ''
+                  } ${errores.nombre ? 'border-red-300' : 'border-gray-300'}`}
+                  placeholder={t('auth.name')}
+                  value={datosFormulario.nombre}
+                  onChange={handleChange}
+                />
+                {errores.nombre && <p className="mt-1 text-xs text-red-600">{errores.nombre}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="apellidos" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.lastName')} *
+                </label>
+                <input
+                  id="apellidos"
+                  name="apellidos"
+                  type="text"
+                  required
+                  disabled={cedulaValidada}
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    cedulaValidada ? 'opacity-60' : ''
+                  } ${errores.apellidos ? 'border-red-300' : 'border-gray-300'}`}
+                  placeholder={t('auth.lastName')}
+                  value={datosFormulario.apellidos}
+                  onChange={handleChange}
+                />
+                {errores.apellidos && <p className="mt-1 text-xs text-red-600">{errores.apellidos}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.email')} *
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.email ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder={t('auth.email')}
+                  value={datosFormulario.email}
+                  onChange={handleChange}
+                />
+                {errores.email && <p className="mt-1 text-xs text-red-600">{errores.email}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="genero" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.gender')} *
+                </label>
+                <select
+                  id="genero"
+                  name="genero"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.genero ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  value={datosFormulario.genero}
+                  onChange={handleChange}
+                >
+                  <option value="Male">{t('auth.male')}</option>
+                  <option value="Female">{t('auth.female')}</option>
+                  <option value="Unisex">{t('auth.other')}</option>
+                </select>
+                {errores.genero && <p className="mt-1 text-xs text-red-600">{errores.genero}</p>}
+              </div>
+
+              <div className="col-span-2">
+                <label htmlFor="telefono" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.phone')} *
+                </label>
+                <input
+                  id="telefono"
+                  name="telefono"
+                  type="tel"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.telefono ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="XXXX-XXXX"
+                  value={datosFormulario.telefono}
+                  onChange={handleChange}
+                  maxLength={9}
+                />
+                {errores.telefono && <p className="mt-1 text-xs text-red-600">{errores.telefono}</p>}
+              </div>
+
+              {/* Checkbox para agregar dirección */}
+              <div className="col-span-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agregarDireccion}
+                    onChange={(e) => setAgregarDireccion(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 text-sm font-medium">
+                    ¿Desea agregar una dirección? (Opcional)
+                  </span>
+                </label>
+              </div>
+
+              {/* Formulario de dirección condicional */}
+              {agregarDireccion && (
+                <>
+                  <div>
+                    <label htmlFor="provincia" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Provincia *
+                    </label>
+                    <input
+                      id="provincia"
+                      name="provincia"
+                      type="text"
+                      required={agregarDireccion}
+                      className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                        errores.provincia ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="San José"
+                      value={datosDireccion.provincia}
+                      onChange={handleDireccionChange}
+                    />
+                    {errores.provincia && <p className="mt-1 text-xs text-red-600">{errores.provincia}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="canton" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Cantón *
+                    </label>
+                    <input
+                      id="canton"
+                      name="canton"
+                      type="text"
+                      required={agregarDireccion}
+                      className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                        errores.canton ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="Central"
+                      value={datosDireccion.canton}
+                      onChange={handleDireccionChange}
+                    />
+                    {errores.canton && <p className="mt-1 text-xs text-red-600">{errores.canton}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="distrito" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Distrito *
+                    </label>
+                    <input
+                      id="distrito"
+                      name="distrito"
+                      type="text"
+                      required={agregarDireccion}
+                      className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                        errores.distrito ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="Carmen"
+                      value={datosDireccion.distrito}
+                      onChange={handleDireccionChange}
+                    />
+                    {errores.distrito && <p className="mt-1 text-xs text-red-600">{errores.distrito}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="barrio" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Barrio
+                    </label>
+                    <input
+                      id="barrio"
+                      name="barrio"
+                      type="text"
+                      className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      placeholder="Ejemplo: Los Yoses"
+                      value={datosDireccion.barrio}
+                      onChange={handleDireccionChange}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label htmlFor="senas" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Señas *
+                    </label>
+                    <textarea
+                      id="senas"
+                      name="senas"
+                      rows={2}
+                      required={agregarDireccion}
+                      className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                        errores.senas ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                      placeholder="200 metros norte de la iglesia..."
+                      value={datosDireccion.senas}
+                      onChange={handleDireccionChange}
+                    />
+                    {errores.senas && <p className="mt-1 text-xs text-red-600">{errores.senas}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="codigoPostal" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Código Postal
+                    </label>
+                    <input
+                      id="codigoPostal"
+                      name="codigoPostal"
+                      type="text"
+                      className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      placeholder="10101"
+                      value={datosDireccion.codigoPostal}
+                      onChange={handleDireccionChange}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="referencia" className="block mb-1 font-bold text-gray-700 text-sm">
+                      Punto de Referencia
+                    </label>
+                    <input
+                      id="referencia"
+                      name="referencia"
+                      type="text"
+                      className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      placeholder="Frente al parque central"
+                      value={datosDireccion.referencia}
+                      onChange={handleDireccionChange}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label htmlFor="password" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.password')} *
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.password ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder={t('auth.password')}
+                  value={datosFormulario.password}
+                  onChange={handleChange}
+                />
+                {errores.password && <p className="mt-1 text-xs text-red-600">{errores.password}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block mb-1 font-bold text-gray-700 text-sm">
+                  {t('auth.confirmPassword')} *
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  required
+                  className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
+                    errores.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder={t('auth.confirmPassword')}
+                  value={datosFormulario.confirmPassword}
+                  onChange={handleChange}
+                />
+                {errores.confirmPassword && <p className="mt-1 text-xs text-red-600">{errores.confirmPassword}</p>}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={cargando || !cedulaValidada}
+              className="w-full py-3 px-4 rounded-lg border-none bg-blue-600 text-white text-base font-bold cursor-pointer transition-all shadow-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed mt-4"
+            >
+              {cargando ? t('common.loading') : t('auth.register')}
+            </button>
+          </form>
+
+          <div className="text-center mt-6 text-gray-700 text-sm">
+            <span>
+              {t('auth.hasAccount')}{' '}
+              <button
+                onClick={() => navegar('/auth/login')}
+                className="text-blue-600 font-bold hover:underline"
+              >
+                {t('auth.login')}
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Register;

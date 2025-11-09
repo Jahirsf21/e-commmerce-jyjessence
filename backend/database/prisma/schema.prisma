@@ -8,29 +8,61 @@ datasource db {
 }
 
 model Cliente {
-  idCliente  String   @id @default(cuid())
+  idCliente  String        @id @default(cuid())
   nombre     String
   apellido   String
-  cedula     String   @unique
+  cedula     String        @unique
   genero     Genero
-  email      String   @unique
+  email      String        @unique
   contrasena String
   telefono   String?
-  direccion  String?
-  role       Role     @default(USER)
+  role       Role          @default(USER)
   pedidos    Pedido[]
+  carrito    CarritoItem[]
+  direcciones Direccion[]
+}
+
+model Direccion {
+  idDireccion   String   @id @default(cuid())
+  clienteId     String
+  provincia     String
+  canton        String
+  distrito      String
+  barrio        String?
+  senas         String   // Señas adicionales (ej: "200m norte de la iglesia")
+  codigoPostal  String?
+  referencia    String?  // Punto de referencia opcional
+  cliente       Cliente  @relation(fields: [clienteId], references: [idCliente], onDelete: Cascade)
+
+  @@index([clienteId])
 }
 
 model Producto {
-  idProducto  String             @id @default(cuid())
-  nombre      String
-  descripcion String
-  categoria   CategoriaPerfume
-  genero      Genero
-  mililitros  Int
-  precio      Float
-  stock       Int
-  pedidos     ArticuloDePedido[]
+  idProducto   String             @id @default(cuid())
+  nombre       String
+  descripcion  String
+  categoria    CategoriaPerfume
+  genero       Genero
+  mililitros   Int
+  precio       Float
+  stock        Int
+  imagenesUrl  String[]           @default([])
+  pedidos      ArticuloDePedido[]
+  carritosItem CarritoItem[]
+}
+
+model CarritoItem {
+  id             String   @id @default(cuid())
+  clienteId      String
+  productoId     String
+  cantidad       Int
+  precioUnitario Float
+  fechaAgregado  DateTime @default(now())
+  cliente        Cliente  @relation(fields: [clienteId], references: [idCliente], onDelete: Cascade)
+  producto       Producto @relation(fields: [productoId], references: [idProducto], onDelete: Cascade)
+
+  @@unique([clienteId, productoId])
+  @@index([clienteId])
 }
 
 model Pedido {

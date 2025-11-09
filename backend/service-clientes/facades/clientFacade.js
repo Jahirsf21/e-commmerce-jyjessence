@@ -55,14 +55,25 @@ class ClientFacade {
 
   async autenticar(email, contrasena) {
     const cliente = await prisma.cliente.findUnique({ where: { email } });
-    if (!cliente || !(await bcrypt.compare(contrasena, cliente.contrasena))) {
-      return null;
+    
+    if (!cliente) {
+      const error = new Error('No existe una cuenta con este correo electrónico');
+      error.code = 'EMAIL_NO_ENCONTRADO';
+      throw error;
     }
+    
+    const contrasenaValida = await bcrypt.compare(contrasena, cliente.contrasena);
+    if (!contrasenaValida) {
+      const error = new Error('La contraseña ingresada es incorrecta');
+      error.code = 'CONTRASENA_INCORRECTA';
+      throw error;
+    }
+    
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET no está definido en las variables de entorno');
     }
     const secretKey = process.env.JWT_SECRET;
-    const payload = { idCliente: cliente.idCliente, role: cliente.role };
+    const payload = { idCliente: cliente.idCliente, email: cliente.email, role: cliente.role };
     const token = jwt.sign(payload, secretKey, { expiresIn: '8h' });
     const { contrasena: _, ...clienteSeguro } = cliente;
     return { token, usuario: clienteSeguro };
@@ -79,14 +90,39 @@ class ClientFacade {
     const saltRounds = 10;
     const contrasenaHasheada = await bcrypt.hash(datosCliente.contrasena, saltRounds);
     
+    // Preparar datos del cliente
+    const datosCreacion = {
+      cedula: datosCliente.cedula,
+      nombre: datosTSE.nombre,
+      apellido: datosTSE.apellido,
+      email: datosCliente.email,
+      contrasena: contrasenaHasheada,
+      genero: datosCliente.genero,
+      telefono: datosCliente.telefono,
+    };
+
+    // Si se proporciona dirección, agregarla como relación anidada
+    if (datosCliente.direccion) {
+      datosCreacion.direcciones = {
+        create: {
+          provincia: datosCliente.direccion.provincia,
+          canton: datosCliente.direccion.canton,
+          distrito: datosCliente.direccion.distrito,
+          barrio: datosCliente.direccion.barrio || null,
+          senas: datosCliente.direccion.senas,
+          codigoPostal: datosCliente.direccion.codigoPostal || null,
+          referencia: datosCliente.direccion.referencia || null,
+        }
+      };
+    }
+    
     const nuevoCliente = await prisma.cliente.create({
-      data: {
-        ...datosCliente,
-        nombre: datosTSE.nombre,
-        apellido: datosTSE.apellido,
-        contrasena: contrasenaHasheada,
-      },
+      data: datosCreacion,
+      include: {
+        direcciones: true
+      }
     });
+    
     const { contrasena: _, ...clienteSeguro } = nuevoCliente;
     return clienteSeguro;
   }
@@ -100,7 +136,14 @@ class ClientFacade {
     const cliente = await prisma.cliente.findUnique({
       where: { idCliente },
       select: {
-        idCliente: true, nombre: true, apellido: true, email: true, genero: true, telefono: true, direccion: true, role: true
+        idCliente: true, 
+        nombre: true, 
+        apellido: true, 
+        email: true, 
+        genero: true, 
+        telefono: true, 
+        role: true,
+        direcciones: true
       }
     });
     return cliente;
@@ -111,7 +154,14 @@ class ClientFacade {
       where: { idCliente },
       data: datos,
       select: {
-        idCliente: true, nombre: true, apellido: true, email: true, genero: true, telefono: true, direccion: true, role: true
+        idCliente: true, 
+        nombre: true, 
+        apellido: true, 
+        email: true, 
+        genero: true, 
+        telefono: true, 
+        role: true,
+        direcciones: true
       }
     });
     return clienteActualizado;
@@ -120,9 +170,73 @@ class ClientFacade {
   async listarTodos() {
     return await prisma.cliente.findMany({
       select: {
-        idCliente: true, nombre: true, apellido: true, email: true, genero: true, role: true, telefono: true, direccion: true
+        idCliente: true, 
+        nombre: true, 
+        apellido: true, 
+        email: true, 
+        genero: true, 
+        role: true, 
+        telefono: true,
+        direcciones: true
       }
     });
+  }
+
+  // ==========================================
+  // == OPERACIONES DE DIRECCIONES
+  // ==========================================
+
+  async agregarDireccion(idCliente, datosDireccion) {
+    const nuevaDireccion = await prisma.direccion.create({
+      data: {
+        clienteId: idCliente,
+        provincia: datosDireccion.provincia,
+        canton: datosDireccion.canton,
+        distrito: datosDireccion.distrito,
+        barrio: datosDireccion.barrio || null,
+        senas: datosDireccion.senas,
+        codigoPostal: datosDireccion.codigoPostal || null,
+        referencia: datosDireccion.referencia || null,
+      },
+    });
+    return nuevaDireccion;
+  }
+
+  async obtenerDirecciones(idCliente) {
+    return await prisma.direccion.findMany({
+      where: { clienteId: idCliente },
+      orderBy: { idDireccion: 'desc' }
+    });
+  }
+
+  async obtenerDireccion(idDireccion, idCliente) {
+    return await prisma.direccion.findFirst({
+      where: { 
+        idDireccion,
+        clienteId: idCliente 
+      }
+    });
+  }
+
+  async actualizarDireccion(idDireccion, idCliente, datos) {
+    const direccionActualizada = await prisma.direccion.updateMany({
+      where: { 
+        idDireccion,
+        clienteId: idCliente 
+      },
+      data: datos
+    });
+    return direccionActualizada;
+  }
+
+  async eliminarDireccion(idDireccion, idCliente) {
+    await prisma.direccion.deleteMany({
+      where: { 
+        idDireccion,
+        clienteId: idCliente 
+      }
+    });
+    return true;
   }
 }
 

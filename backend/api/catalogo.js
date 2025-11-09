@@ -1,108 +1,16 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import authMiddleware from '../shared/middleware/auth.js';
 import isAdmin from '../shared/middleware/admin.js';
-import CatalogoFacade from './facades/catalogoFacade.js';
-import upload from './middleware/upload.js';
-import cloudinaryService from './services/cloudinaryService.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Cargar variables de entorno desde database/.env
-dotenv.config({ path: join(__dirname, '../database/.env') });
+import CatalogoFacade from '../service-catalogo/facades/catalogoFacade.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // ==========================================
-// ==   ENDPOINTS DE IMÁGENES (CLOUDINARY) ==
+// ==      RUTAS PÚBLICAS (SIN TOKEN)      ==
 // ==========================================
-
-/**
- * POST /api/productos/upload-image
- * Sube una o múltiples imágenes a Cloudinary (máximo 4)
- * Requiere: autenticación + admin
- */
-app.post('/api/productos/upload-image', 
-  authMiddleware, 
-  isAdmin, 
-  upload.array('images', 4), // Permite hasta 4 imágenes
-  async (req, res) => {
-    try {
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ error: 'No se proporcionaron imágenes' });
-      }
-
-      // Subir todas las imágenes a Cloudinary
-      const uploadPromises = req.files.map(file => 
-        cloudinaryService.uploadImage(file.path)
-      );
-      
-      const imageDataArray = await Promise.all(uploadPromises);
-      
-      res.status(200).json({
-        mensaje: `${imageDataArray.length} imagen(es) subida(s) exitosamente`,
-        data: imageDataArray // Array de objetos con url, publicId, etc.
-      });
-    } catch (error) {
-      console.error('Error al subir imágenes:', error);
-      res.status(500).json({ error: error.message });
-    }
-  }
-);
-
-/**
- * DELETE /api/productos/delete-image
- * Elimina una o múltiples imágenes de Cloudinary
- * Requiere: autenticación + admin
- */
-app.delete('/api/productos/delete-image', 
-  authMiddleware, 
-  isAdmin, 
-  async (req, res) => {
-    try {
-      const { publicId, publicIds } = req.body;
-      
-      if (!publicId && (!publicIds || publicIds.length === 0)) {
-        return res.status(400).json({ error: 'Se requiere publicId o publicIds' });
-      }
-      
-      // Si viene un solo publicId
-      if (publicId) {
-        const result = await cloudinaryService.deleteImage(publicId);
-        return res.status(200).json({
-          mensaje: 'Imagen eliminada exitosamente',
-          result
-        });
-      }
-      
-      // Si vienen múltiples publicIds
-      const deletePromises = publicIds.map(id => 
-        cloudinaryService.deleteImage(id)
-      );
-      
-      const results = await Promise.all(deletePromises);
-      
-      res.status(200).json({
-        mensaje: `${results.length} imagen(es) eliminada(s) exitosamente`,
-        results
-      });
-    } catch (error) {
-      console.error('Error al eliminar imagen(es):', error);
-      res.status(500).json({ error: error.message });
-    }
-  }
-);
-
-// ==========================================
-// ==   ENDPOINTS DE PRODUCTOS (PÚBLICOS)  ==
-// ==========================================
-
 
 app.get('/api/productos', async (req, res) => {
   try {
@@ -150,6 +58,10 @@ app.get('/api/productos/:id', async (req, res) => {
     res.status(500).json({ error: 'No se pudo obtener el producto.' });
   }
 });
+
+// ===================================================================
+// == RUTAS PROTEGIDAS SOLO PARA ADMINISTRADORES (TOKEN + ROL ADMIN)==
+// ===================================================================
 
 app.post('/api/productos', authMiddleware, isAdmin, async (req, res) => {
   try {
@@ -217,24 +129,6 @@ app.put('/api/productos/:id', authMiddleware, isAdmin, async (req, res) => {
 
 app.delete('/api/productos/:id', authMiddleware, isAdmin, async (req, res) => {
   try {
-    // Obtener producto antes de eliminarlo para borrar sus imágenes
-    const producto = await CatalogoFacade.obtenerProductoPorId(req.params.id);
-    
-    // Eliminar todas las imágenes de Cloudinary si existen
-    if (producto.imagenesUrl && producto.imagenesUrl.length > 0) {
-      const deletePromises = producto.imagenesUrl.map(url => {
-        const publicId = cloudinaryService.extractPublicId(url);
-        if (publicId) {
-          return cloudinaryService.deleteImage(publicId).catch(error => {
-            console.error('Error al eliminar imagen de Cloudinary:', error);
-            // Continuar aunque falle una imagen
-          });
-        }
-      });
-      
-      await Promise.all(deletePromises);
-    }
-    
     await CatalogoFacade.eliminarProducto(req.params.id);
     res.status(204).send();
   } catch (error) {
@@ -262,8 +156,5 @@ app.patch('/api/productos/:id/stock', authMiddleware, isAdmin, async (req, res) 
   }
 });
 
-const PORT = process.env.PORT || 3002;
-
-app.listen(PORT, () => {
-  console.log(`Servidor de Catálogo escuchando en http://localhost:${PORT}`);
-});
+// Exportar para Vercel
+export default app;
