@@ -16,16 +16,13 @@ const Header = () => {
 
   return (
     <header>
-      {/* Topbar */}
   <div className="bg-blue-900 text-white text-xs flex justify-end items-center px-4 py-2">
-        {/* Idioma Dropdown */}
         <div className="mr-4">
           <LanguageDropdown
             value={i18n.language}
             onChange={codigo => i18n.changeLanguage(codigo)}
           />
         </div>
-        {/* Instagram logo SVG */}
         <a
           href="https://www.instagram.com/jyj.essence"
           target="_blank"
@@ -39,7 +36,6 @@ const Header = () => {
             style={{ display: 'inline-block' }}
           />
         </a>
-        {/* WhatsApp logo SVG */}
         <a
           href="https://wa.me/50660440248"
           target="_blank"
@@ -55,10 +51,8 @@ const Header = () => {
         </a>
       </div>
 
-      {/* Main Navbar */}
       <div className="bg-white shadow-sm border-b border-gray-200 w-full">
         <div className="px-4 sm:px-6 lg:px-8 flex items-center h-20 w-full">
-          {/* Logo */}
           <Link to="/" className="flex items-center mr-8">
             <img
               src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
@@ -68,40 +62,47 @@ const Header = () => {
             <span className="ml-3 text-3xl font-bold text-blue-600 hover:text-blue-700">JyJ Essence</span>
           </Link>
 
-          {/* Main Menu */}
           <nav className="flex-1 flex justify-center space-x-8">
-            <Link to="/" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.home')}</Link>
-            <Link to="/products" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.catalog')}</Link>
-            <Link to="/cart" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.cart')}</Link>
-            {estaAutenticado && (
-              <>
-                <Link to="/account" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.orders')}</Link>
-                {usuario?.rol === 'ADMIN' && (
-                  <Link to="/admin" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.admin')}</Link>
-                )}
-              </>
+            {usuario?.rol === 'ADMIN' && (
+              <Link to="/admin" className="text-gray-700 hover:text-blue-600 text-base font-medium">{t('nav.admin')}</Link>
             )}
           </nav>
 
-          {/* Iconos de usuario/carrito */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
+            <Link to="/search" className="text-gray-700 hover:text-blue-600 flex items-center p-2">
+              <img
+                src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/search_mntlda.svg"
+                alt="Buscar"
+                className="h-6 w-6 object-contain"
+              />
+            </Link>
+            <Link to="/cart" className="text-gray-700 hover:text-blue-600 flex items-center p-2">
+              <img
+                src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/carrito_idlvij.svg"
+                alt="Shopping Cart"
+                className="h-6 w-6 object-contain"
+              />
+            </Link>
             {estaAutenticado ? (
-              <>
-                <span className="text-gray-700 text-sm">{usuario?.email}</span>
-                <button
-                  onClick={manejarCierreSesion}
-                  className="text-gray-700 hover:text-red-600 px-4 py-2 text-sm font-medium"
-                >
-                  {t('nav.logout')}
-                </button>
-              </>
+              <Link to="/account" className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium flex items-center">
+                <img
+                  src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
+                  alt="Account"
+                  className="h-5 w-5 mr-2 object-contain"
+                />
+                {t('nav.myAccount')}
+              </Link>
             ) : (
               <>
                 <button
                   onClick={() => navegar('/auth/login')}
-                  className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium"
+                  className="text-gray-700 hover:text-blue-600 px-4 py-2 text-sm font-medium flex items-center"
                 >
-                  <i className="fas fa-user mr-2"></i>
+                  <img
+                    src="https://res.cloudinary.com/drec8g03e/image/upload/v1762674408/account_r3kxej.svg"
+                    alt="Account"
+                    className="h-5 w-5 mr-2 object-contain"
+                  />
                   {t('nav.login')}
                 </button>
                 <button
@@ -112,12 +113,6 @@ const Header = () => {
                 </button>
               </>
             )}
-            {/* Icono carrito */}
-            <Link to="/cart" className="relative">
-              <i className="fas fa-shopping-cart text-2xl text-gray-700 hover:text-blue-600"></i>
-              {/* Ejemplo de contador de productos en el carrito */}
-              {/* <span className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full px-2 text-xs">3</span> */}
-            </Link>
           </div>
         </div>
       </div>

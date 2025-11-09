@@ -87,8 +87,8 @@ const Login = () => {
       
       await Swal.fire({
         icon: 'success',
-        title: '¡Bienvenido!',
-        text: t('message.loginSuccess'),
+        title: t('success.login.title'),
+        text: t('success.login.message'),
         confirmButtonColor: '#2563eb',
         timer: 2000,
         showConfirmButton: false
@@ -103,30 +103,29 @@ const Login = () => {
     } catch (error) {
       console.error('Error en login:', error);
       
-      let mensajeError = 'Error al iniciar sesión';
-      let tituloError = 'Error de autenticación';
+      let mensajeError = t('error.login.title');
+      let tituloError = t('error.login.title');
       let iconoError = 'error';
       
-      // Verificar el código de error del backend
       const codigoError = error.response?.data?.codigo;
       
       if (codigoError === 'EMAIL_NO_ENCONTRADO') {
-        tituloError = 'Correo no encontrado';
-        mensajeError = error.response.data.error || 'No existe una cuenta con este correo electrónico';
+        tituloError = t('error.login.emailNotFoundTitle');
+        mensajeError = error.response.data.error || t('error.login.emailNotFound');
         iconoError = 'warning';
       } else if (codigoError === 'CONTRASENA_INCORRECTA') {
-        tituloError = 'Contraseña incorrecta';
-        mensajeError = error.response.data.error || 'La contraseña ingresada es incorrecta';
+        tituloError = t('error.login.wrongPasswordTitle');
+        mensajeError = error.response.data.error || t('error.login.wrongPassword');
         iconoError = 'error';
       } else if (error.response?.data?.error) {
         mensajeError = error.response.data.error;
       } else if (error.message) {
         mensajeError = error.message;
       } else if (error.response?.status === 401) {
-        mensajeError = 'Credenciales incorrectas';
+        mensajeError = t('message.loginError');
       } else if (error.response?.status === 404) {
-        tituloError = 'Usuario no encontrado';
-        mensajeError = 'No existe una cuenta con este correo';
+        tituloError = t('error.login.emailNotFoundTitle');
+        mensajeError = t('error.login.emailNotFound');
         iconoError = 'warning';
       }
       
@@ -135,7 +134,7 @@ const Login = () => {
         title: tituloError,
         text: mensajeError,
         confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Intentar de nuevo'
+        confirmButtonText: t('error.login.tryAgain')
       });
     } finally {
       setCargando(false);
@@ -144,7 +143,6 @@ const Login = () => {
 
   return (
     <div className="fixed top-0 left-0 w-screen h-screen flex font-['Lato',sans-serif] overflow-hidden z-40">
-      {/* Panel de Imagen */}
       <div className="flex-[1.2] relative flex items-end p-10 overflow-hidden">
         {imagenesCarrusel.map((imagen, indice) => (
           <img
@@ -156,7 +154,6 @@ const Login = () => {
             }`}
           />
         ))}
-        
         <div className="relative z-10">
           <h2 className="font-['Merriweather',serif] font-bold text-4xl text-white mb-4 drop-shadow-lg">
             {imagenesCarrusel[indiceCarrusel].texto}
@@ -175,9 +172,7 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Panel de Formulario */}
       <div className="flex-1 flex flex-col bg-white p-8 overflow-y-auto relative">
-        {/* Botón Home */}
         <button
           onClick={() => navegar('/')}
           className="absolute top-8 right-8 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors z-10"
@@ -188,10 +183,7 @@ const Login = () => {
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
         </button>
-
-        {/* Contenido del Formulario */}
         <div className="flex-grow flex flex-col justify-center w-full max-w-md mx-auto">
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <img
               src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
@@ -199,11 +191,9 @@ const Login = () => {
               className="h-32 w-32 object-contain"
             />
           </div>
-
           <h1 className="font-['Lato',sans-serif] font-black text-4xl text-gray-800 text-center mb-12">
             {t('auth.loginTitle')}
           </h1>
-          
           <form className="space-y-6" onSubmit={manejarEnvio}>
             <div className="text-left">
               <label htmlFor="email" className="block mb-2 font-bold text-gray-700 text-sm">
@@ -226,7 +216,6 @@ const Login = () => {
                 <p className="mt-1 text-sm text-red-600">{errores.email}</p>
               )}
             </div>
-            
             <div className="text-left">
               <label htmlFor="password" className="block mb-2 font-bold text-gray-700 text-sm">
                 {t('auth.password')}
@@ -248,7 +237,6 @@ const Login = () => {
                 <p className="mt-1 text-sm text-red-600">{errores.password}</p>
               )}
             </div>
-
             <button
               type="submit"
               disabled={cargando}
@@ -257,7 +245,6 @@ const Login = () => {
               {cargando ? t('common.loading') : t('auth.login')}
             </button>
           </form>
-
           <div className="text-center mt-8 text-gray-700">
             <span>
               {t('auth.noAccount')}{' '}

@@ -90,7 +90,7 @@ const Register = () => {
       const datos = await ecommerceFacade.consultarCedula(cedulaLimpia);
       
       if (!datos || !datos.valida) {
-        throw new Error('Cédula no válida o no encontrada');
+        throw new Error(t('error.register.cedulaNotFound'));
       }
       
       setDatosFormulario(prev => ({
@@ -102,8 +102,8 @@ const Register = () => {
       setCedulaValidada(true);
       await Swal.fire({
         icon: 'success',
-        title: '¡Cédula validada!',
-        text: t('message.cedulaValidated'),
+        title: t('success.cedula.title'),
+        text: t('success.cedula.message'),
         confirmButtonColor: '#2563eb',
         timer: 2000,
         showConfirmButton: false
@@ -113,10 +113,10 @@ const Register = () => {
       console.error('Error consultando cédula:', error);
       await Swal.fire({
         icon: 'error',
-        title: 'Error de validación',
-        text: error.message || t('message.cedulaValidationError'),
+        title: t('error.register.cedulaNotFoundTitle'),
+        text: error.message || t('error.register.cedulaNotFound'),
         confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Entendido'
+        confirmButtonText: t('button.understood')
       });
       setCedulaValidada(false);
     } finally {
@@ -189,6 +189,14 @@ const Register = () => {
       nuevosErrores.confirmPassword = t('auth.confirmPasswordRequired');
     } else if (datosFormulario.password !== datosFormulario.confirmPassword) {
       nuevosErrores.confirmPassword = t('auth.passwordMismatch');
+      // Mostrar alerta inmediatamente si las contraseñas no coinciden
+      Swal.fire({
+        icon: 'error',
+        title: t('error.register.passwordMismatchTitle'),
+        text: t('error.register.passwordMismatch'),
+        confirmButtonColor: '#2563eb',
+        confirmButtonText: t('button.understood')
+      });
     }
     
     setErrores(nuevosErrores);
@@ -265,21 +273,52 @@ const Register = () => {
       
       await Swal.fire({
         icon: 'success',
-        title: '¡Registro exitoso!',
-        text: t('message.registerSuccess'),
+        title: t('success.register.title'),
+        text: t('success.register.message'),
         confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Ir a iniciar sesión'
+        confirmButtonText: t('success.register.button')
       });
       
       navegar('/auth/login');
       
     } catch (error) {
+      console.error('Error en registro:', error);
+      
+      let mensajeError = t('error.register.title');
+      let tituloError = t('error.register.title');
+      let iconoError = 'error';
+      
+      // Verificar el código de error del backend
+      const codigoError = error.response?.data?.codigo;
+      
+      if (codigoError === 'CEDULA_DUPLICADA') {
+        tituloError = t('error.register.cedulaDuplicateTitle');
+        mensajeError = error.response.data.error || t('error.register.cedulaDuplicate');
+        iconoError = 'warning';
+      } else if (codigoError === 'EMAIL_DUPLICADO') {
+        tituloError = t('error.register.emailDuplicateTitle');
+        mensajeError = error.response.data.error || t('error.register.emailDuplicate');
+        iconoError = 'warning';
+      } else if (codigoError === 'CEDULA_INVALIDA') {
+        tituloError = t('error.register.cedulaInvalidTitle');
+        mensajeError = error.response.data.error || t('error.register.cedulaInvalid');
+        iconoError = 'error';
+      } else if (error.response?.data?.error) {
+        mensajeError = error.response.data.error;
+      } else if (error.message) {
+        mensajeError = error.message;
+      } else if (error.response?.status === 409) {
+        tituloError = t('error.register.title');
+        mensajeError = t('error.register.emailDuplicate');
+        iconoError = 'warning';
+      }
+      
       await Swal.fire({
-        icon: 'error',
-        title: 'Error en el registro',
-        text: error.message || t('message.registerError'),
+        icon: iconoError,
+        title: tituloError,
+        text: mensajeError,
         confirmButtonColor: '#2563eb',
-        confirmButtonText: 'Intentar de nuevo'
+        confirmButtonText: t('error.register.tryAgain')
       });
     } finally {
       setCargando(false);
@@ -288,7 +327,6 @@ const Register = () => {
 
   return (
     <div className="fixed top-0 left-0 w-screen h-screen flex font-['Lato',sans-serif] overflow-hidden z-40">
-      {/* Panel de Imagen */}
       <div className="flex-[1.2] relative flex items-end p-10 overflow-hidden">
         {imagenesCarrusel.map((imagen, indice) => (
           <img
@@ -300,7 +338,6 @@ const Register = () => {
             }`}
           />
         ))}
-        
         <div className="relative z-10">
           <h2 className="font-['Merriweather',serif] font-bold text-4xl text-white mb-4 drop-shadow-lg">
             {imagenesCarrusel[indiceCarrusel].texto}
@@ -318,10 +355,7 @@ const Register = () => {
           </div>
         </div>
       </div>
-
-      {/* Panel de Formulario */}
       <div className="flex-1 flex flex-col bg-white p-4 overflow-y-auto relative">
-        {/* Botón Home */}
         <button
           onClick={() => navegar('/')}
           className="absolute top-8 right-8 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors z-10"
@@ -332,10 +366,7 @@ const Register = () => {
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
         </button>
-
-        {/* Contenido del Formulario */}
         <div className="flex-grow flex flex-col justify-center w-full max-w-2xl mx-auto py-4">
-          {/* Logo */}
           <div className="flex justify-center mb-4">
             <img
               src="https://res.cloudinary.com/drec8g03e/image/upload/v1762655746/jyjessence_y75wqc.webp"
@@ -343,21 +374,14 @@ const Register = () => {
               className="h-28 w-28 object-contain"
             />
           </div>
-
           <h1 className="font-['Lato',sans-serif] font-black text-3xl text-gray-800 text-center mb-6">
             {t('auth.registerTitle')}
           </h1>
-          
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label htmlFor="cedula" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.cedula')} *
-                  {cargandoCedula && (
-                    <span className="ml-2 text-blue-600 text-xs">
-                      ⏳ {t('auth.validatingCedula')}
-                    </span>
-                  )}
                   {cedulaValidada && (
                     <span className="ml-2 text-green-600 text-xs">
                       ✓ {t('auth.cedulaValidated')}
@@ -379,7 +403,6 @@ const Register = () => {
                 />
                 {errores.cedula && <p className="mt-1 text-xs text-red-600">{errores.cedula}</p>}
               </div>
-
               <div>
                 <label htmlFor="nombre" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.name')} *
@@ -399,7 +422,6 @@ const Register = () => {
                 />
                 {errores.nombre && <p className="mt-1 text-xs text-red-600">{errores.nombre}</p>}
               </div>
-
               <div>
                 <label htmlFor="apellidos" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.lastName')} *
@@ -419,7 +441,6 @@ const Register = () => {
                 />
                 {errores.apellidos && <p className="mt-1 text-xs text-red-600">{errores.apellidos}</p>}
               </div>
-
               <div>
                 <label htmlFor="email" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.email')} *
@@ -439,7 +460,6 @@ const Register = () => {
                 />
                 {errores.email && <p className="mt-1 text-xs text-red-600">{errores.email}</p>}
               </div>
-
               <div>
                 <label htmlFor="genero" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.gender')} *
@@ -460,7 +480,6 @@ const Register = () => {
                 </select>
                 {errores.genero && <p className="mt-1 text-xs text-red-600">{errores.genero}</p>}
               </div>
-
               <div className="col-span-2">
                 <label htmlFor="telefono" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.phone')} *
@@ -480,8 +499,6 @@ const Register = () => {
                 />
                 {errores.telefono && <p className="mt-1 text-xs text-red-600">{errores.telefono}</p>}
               </div>
-
-              {/* Checkbox para agregar dirección */}
               <div className="col-span-2">
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
@@ -491,17 +508,15 @@ const Register = () => {
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="text-gray-700 text-sm font-medium">
-                    ¿Desea agregar una dirección? (Opcional)
+                    {t('address.addAddress')}
                   </span>
                 </label>
               </div>
-
-              {/* Formulario de dirección condicional */}
               {agregarDireccion && (
                 <>
                   <div>
                     <label htmlFor="provincia" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Provincia *
+                      {t('address.province')} *
                     </label>
                     <input
                       id="provincia"
@@ -511,16 +526,15 @@ const Register = () => {
                       className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
                         errores.provincia ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="San José"
+                      placeholder={t('address.provincePlaceholder')}
                       value={datosDireccion.provincia}
                       onChange={handleDireccionChange}
                     />
                     {errores.provincia && <p className="mt-1 text-xs text-red-600">{errores.provincia}</p>}
                   </div>
-
                   <div>
                     <label htmlFor="canton" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Cantón *
+                      {t('address.canton')} *
                     </label>
                     <input
                       id="canton"
@@ -530,16 +544,15 @@ const Register = () => {
                       className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
                         errores.canton ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="Central"
+                      placeholder={t('address.cantonPlaceholder')}
                       value={datosDireccion.canton}
                       onChange={handleDireccionChange}
                     />
                     {errores.canton && <p className="mt-1 text-xs text-red-600">{errores.canton}</p>}
                   </div>
-
                   <div>
                     <label htmlFor="distrito" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Distrito *
+                      {t('address.district')} *
                     </label>
                     <input
                       id="distrito"
@@ -549,31 +562,29 @@ const Register = () => {
                       className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
                         errores.distrito ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="Carmen"
+                      placeholder={t('address.districtPlaceholder')}
                       value={datosDireccion.distrito}
                       onChange={handleDireccionChange}
                     />
                     {errores.distrito && <p className="mt-1 text-xs text-red-600">{errores.distrito}</p>}
                   </div>
-
                   <div>
                     <label htmlFor="barrio" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Barrio
+                      {t('address.neighborhood')}
                     </label>
                     <input
                       id="barrio"
                       name="barrio"
                       type="text"
                       className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="Ejemplo: Los Yoses"
+                      placeholder={t('address.neighborhoodPlaceholder')}
                       value={datosDireccion.barrio}
                       onChange={handleDireccionChange}
                     />
                   </div>
-
                   <div className="col-span-2">
                     <label htmlFor="senas" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Señas *
+                      {t('address.directions')} *
                     </label>
                     <textarea
                       id="senas"
@@ -583,45 +594,42 @@ const Register = () => {
                       className={`w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 ${
                         errores.senas ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      placeholder="200 metros norte de la iglesia..."
+                      placeholder={t('address.directionsPlaceholder')}
                       value={datosDireccion.senas}
                       onChange={handleDireccionChange}
                     />
                     {errores.senas && <p className="mt-1 text-xs text-red-600">{errores.senas}</p>}
                   </div>
-
                   <div>
                     <label htmlFor="codigoPostal" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Código Postal
+                      {t('address.postalCode')}
                     </label>
                     <input
                       id="codigoPostal"
                       name="codigoPostal"
                       type="text"
                       className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="10101"
+                      placeholder={t('address.postalCodePlaceholder')}
                       value={datosDireccion.codigoPostal}
                       onChange={handleDireccionChange}
                     />
                   </div>
-
                   <div>
                     <label htmlFor="referencia" className="block mb-1 font-bold text-gray-700 text-sm">
-                      Punto de Referencia
+                      {t('address.reference')}
                     </label>
                     <input
                       id="referencia"
                       name="referencia"
                       type="text"
                       className="w-full px-4 py-2.5 border rounded-lg bg-gray-50 text-sm text-gray-700 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                      placeholder="Frente al parque central"
+                      placeholder={t('address.referencePlaceholder')}
                       value={datosDireccion.referencia}
                       onChange={handleDireccionChange}
                     />
                   </div>
                 </>
               )}
-
               <div>
                 <label htmlFor="password" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.password')} *
@@ -640,7 +648,6 @@ const Register = () => {
                 />
                 {errores.password && <p className="mt-1 text-xs text-red-600">{errores.password}</p>}
               </div>
-
               <div>
                 <label htmlFor="confirmPassword" className="block mb-1 font-bold text-gray-700 text-sm">
                   {t('auth.confirmPassword')} *
@@ -660,7 +667,6 @@ const Register = () => {
                 {errores.confirmPassword && <p className="mt-1 text-xs text-red-600">{errores.confirmPassword}</p>}
               </div>
             </div>
-
             <button
               type="submit"
               disabled={cargando || !cedulaValidada}
@@ -669,7 +675,6 @@ const Register = () => {
               {cargando ? t('common.loading') : t('auth.register')}
             </button>
           </form>
-
           <div className="text-center mt-6 text-gray-700 text-sm">
             <span>
               {t('auth.hasAccount')}{' '}

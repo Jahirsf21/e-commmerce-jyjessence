@@ -77,7 +77,10 @@ class EcommerceFacade {
         user: usuario
       };
     } catch (error) {
-      throw new Error(error.response?.data?.error || error.message);
+      // Preservar la respuesta completa del error para que Register.jsx pueda acceder al código
+      const nuevoError = new Error(error.response?.data?.error || error.message || 'Error al registrarse');
+      nuevoError.response = error.response;
+      throw nuevoError;
     }
   }
 

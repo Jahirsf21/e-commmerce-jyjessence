@@ -80,6 +80,28 @@ class ClientFacade {
   }
 
   async registrar(datosCliente) {
+    // Verificar si ya existe un usuario con la misma cédula
+    const clienteExistentePorCedula = await prisma.cliente.findUnique({
+      where: { cedula: datosCliente.cedula }
+    });
+    
+    if (clienteExistentePorCedula) {
+      const error = new Error('Ya existe un usuario registrado con esta cédula');
+      error.code = 'CEDULA_DUPLICADA';
+      throw error;
+    }
+    
+    // Verificar si ya existe un usuario con el mismo email
+    const clienteExistentePorEmail = await prisma.cliente.findUnique({
+      where: { email: datosCliente.email }
+    });
+    
+    if (clienteExistentePorEmail) {
+      const error = new Error('Ya existe una cuenta con este correo electrónico');
+      error.code = 'EMAIL_DUPLICADO';
+      throw error;
+    }
+    
     const datosTSE = await this.consultarCedulaTSE(datosCliente.cedula);
     if (!datosTSE) {
       const error = new Error('La cédula proporcionada no es válida o no fue encontrada.');

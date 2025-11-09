@@ -32,13 +32,38 @@ app.post('/api/clientes/registro', async (req, res) => {
     const clienteSeguro = await ClientFacade.registrar(req.body);
     res.status(201).json(clienteSeguro);
   } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(409).json({ error: 'El correo electrónico o la cédula ya están en uso.' });
-    }
-    if (error.code === 'CEDULA_INVALIDA') {
-      return res.status(400).json({ error: error.message });
-    }
     console.error("Error al registrar cliente:", error);
+    
+    // Manejar errores específicos
+    if (error.code === 'CEDULA_DUPLICADA') {
+      return res.status(409).json({ 
+        error: error.message,
+        codigo: 'CEDULA_DUPLICADA'
+      });
+    }
+    
+    if (error.code === 'EMAIL_DUPLICADO') {
+      return res.status(409).json({ 
+        error: error.message,
+        codigo: 'EMAIL_DUPLICADO'
+      });
+    }
+    
+    if (error.code === 'CEDULA_INVALIDA') {
+      return res.status(400).json({ 
+        error: error.message,
+        codigo: 'CEDULA_INVALIDA'
+      });
+    }
+    
+    // Error de Prisma por restricción única
+    if (error.code === 'P2002') {
+      return res.status(409).json({ 
+        error: 'El correo electrónico o la cédula ya están en uso.',
+        codigo: 'DUPLICADO'
+      });
+    }
+    
     res.status(500).json({ error: 'No se pudo registrar el cliente.' });
   }
 });
