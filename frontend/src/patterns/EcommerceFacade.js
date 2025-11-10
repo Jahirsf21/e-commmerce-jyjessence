@@ -18,6 +18,7 @@ import { authService } from '../services/authService';
 import { productService } from '../services/productService';
 import { cartService } from '../services/cartService';
 import { orderService } from '../services/orderService';
+import { addressService } from '../services/addressService';
 
 class EcommerceFacade {
   constructor() {
@@ -274,9 +275,9 @@ class EcommerceFacade {
   // ==========================================
 
   /**
-   * Proceso completo de checkout con validaciones
+   * Finalizar compra validando stock y perfil (sin pasarela de pago)
    */
-  async completePurchase() {
+  async completePurchase(direccionId) {
     try {
       const resumenCarrito = await this.getCartSummary();
       
@@ -293,19 +294,20 @@ class EcommerceFacade {
         }
       }
 
-      const perfilUsuario = await this.auth.getProfile();
-      if (!perfilUsuario.telefono || !perfilUsuario.direccion) {
-        throw new Error('Por favor completa tu perfil antes de realizar la compra');
+      // Dirección es obligatoria para el pedido
+      if (!direccionId) {
+        throw new Error('Debes seleccionar una dirección de envío');
       }
 
-      const pedido = await this.cart.checkout();
+  // Ahora finalizamos el pedido sin pasarela de pago, con dirección
+  const pedido = await this.cart.finalize(direccionId);
 
       return {
         success: true,
         message: 'Pedido realizado exitosamente',
         order: {
-          ...pedido,
-          totalFormateado: `₡${pedido.total.toFixed(2)}`
+          ...pedido.pedido,
+          totalFormateado: `₡${(pedido.pedido?.montoTotal || pedido.pedido?.total || 0).toFixed(2)}`
         }
       };
     } catch (error) {
@@ -323,11 +325,12 @@ class EcommerceFacade {
   async getOrderHistory() {
     try {
       const pedidos = await this.orders.getMyOrders();
-      
+
+      // Backend devuelve campos: idPedido, fecha, estado, montoTotal, articulos[]
       return pedidos.map(pedido => ({
         ...pedido,
-        fechaFormateada: new Date(pedido.fechaPedido).toLocaleDateString('es-CR'),
-        totalFormateado: `₡${pedido.total.toFixed(2)}`,
+        fechaFormateada: new Date(pedido.fecha).toLocaleDateString('es-CR'),
+        totalFormateado: `₡${(pedido.montoTotal ?? 0).toFixed(2)}`,
         itemCount: pedido.articulos?.length || 0
       }));
     } catch (error) {
@@ -338,12 +341,12 @@ class EcommerceFacade {
   async getOrderDetails(idPedido) {
     try {
       const pedido = await this.orders.getById(idPedido);
-      
+
       return {
         ...pedido,
-        fechaFormateada: new Date(pedido.fechaPedido).toLocaleDateString('es-CR'),
-        totalFormateado: `₡${pedido.total.toFixed(2)}`,
-        articulos: pedido.articulos.map(art => ({
+        fechaFormateada: new Date(pedido.fecha).toLocaleDateString('es-CR'),
+        totalFormateado: `₡${(pedido.montoTotal ?? 0).toFixed(2)}`,
+        articulos: (pedido.articulos || []).map(art => ({
           ...art,
           subtotalFormateado: `₡${(art.precioUnitario * art.cantidad).toFixed(2)}`
         }))
@@ -384,6 +387,18 @@ class EcommerceFacade {
       return { success: true };
     } catch (error) {
       throw new Error(error.response?.data?.error || 'Error al eliminar dirección');
+    }
+  }
+
+  // ==========================================
+  // == OPERACIONES DE DIRECCIONES (LISTADO)
+  // ==========================================
+  async getAddresses() {
+    try {
+      const direcciones = await addressService.getAddresses();
+      return direcciones || [];
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Error al cargar direcciones');
     }
   }
 

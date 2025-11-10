@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { productService } from '../../services/productService';
-import { cartService } from '../../services/cartService';
+import Ecommerce from '../../patterns/EcommerceFacade';
 
 const Products = () => {
   const { t } = useTranslation();
@@ -24,7 +23,7 @@ const Products = () => {
 
   const cargarProductos = async () => {
     try {
-      const data = await productService.getAll();
+      const data = await Ecommerce.getCatalog();
       setProductos(data);
     } catch (error) {
       console.error('Error al cargar productos:', error);
@@ -40,7 +39,7 @@ const Products = () => {
 
   const agregarAlCarrito = async (productoId, nombreProducto) => {
     try {
-      await cartService.addItem(productoId, 1);
+      await Ecommerce.addToCart(productoId, 1);
       Swal.fire({
         icon: 'success',
         title: t('message.success'),
@@ -119,8 +118,8 @@ const Products = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Catálogo de Productos</h1>
-          <p className="text-gray-600">Explora nuestra selección de fragancias exclusivas</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('products.catalogTitle')}</h1>
+          <p className="text-gray-600">{t('products.catalogSubtitle')}</p>
         </div>
 
         {/* Barra de Búsqueda y Filtros */}
@@ -129,7 +128,7 @@ const Products = () => {
           <div className="mb-4">
             <input
               type="text"
-              placeholder="Buscar productos..."
+              placeholder={t('header.searchPlaceholder')}
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -140,13 +139,13 @@ const Products = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Categoría */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('product.category')}</label>
               <select
                 value={categoriaFiltro}
                 onChange={(e) => setCategoriaFiltro(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Todas</option>
+                <option value="">{t('common.clear')}</option>
                 <option value="EauDeParfum">Eau de Parfum</option>
                 <option value="Parfum">Parfum</option>
                 <option value="EauDeToilette">Eau de Toilette</option>
@@ -156,13 +155,13 @@ const Products = () => {
 
             {/* Género */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Género</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('product.gender')}</label>
               <select
                 value={generoFiltro}
                 onChange={(e) => setGeneroFiltro(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Todos</option>
+                <option value="">{t('common.clear')}</option>
                 <option value="Female">Mujer</option>
                 <option value="Male">Hombre</option>
                 <option value="Unisex">Unisex</option>
@@ -171,7 +170,7 @@ const Products = () => {
 
             {/* Precio */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Precio</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('product.price')}</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -217,14 +216,14 @@ const Products = () => {
                 onClick={limpiarFiltros}
                 className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
-                Limpiar Filtros
+                {t('filters.clearFilters')}
               </button>
             </div>
           </div>
 
           {/* Contador de resultados */}
           <div className="mt-4 text-sm text-gray-600">
-            {productosFiltrados.length} {productosFiltrados.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+            {t('products.foundCount', { count: productosFiltrados.length })}
           </div>
         </div>
 
@@ -234,7 +233,7 @@ const Products = () => {
             <svg className="mx-auto h-24 w-24 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <p className="text-gray-600 text-lg">No se encontraron productos con los filtros seleccionados</p>
+            <p className="text-gray-600 text-lg">{t('products.noResults')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -262,13 +261,13 @@ const Products = () => {
                   
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm text-gray-500">{producto.mililitros} ml</span>
-                    <span className="text-sm text-gray-500">{producto.genero === 'Female' ? 'Mujer' : producto.genero === 'Male' ? 'Hombre' : 'Unisex'}</span>
+                    <span className="text-sm text-gray-500">{producto.genero === 'Female' ? t('gender.FEMENINO') : producto.genero === 'Male' ? t('gender.MASCULINO') : t('gender.UNISEX')}</span>
                   </div>
 
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-blue-600">${producto.precio.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-blue-600">₡{producto.precio.toFixed(2)}</span>
                     <span className={`text-sm px-2 py-1 rounded ${producto.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {producto.stock > 0 ? `Stock: ${producto.stock}` : 'Agotado'}
+                      {producto.stock > 0 ? t('products.stock', { stock: producto.stock }) : t('product.outOfStock')}
                     </span>
                   </div>
 
@@ -277,7 +276,7 @@ const Products = () => {
                     disabled={producto.stock === 0}
                     className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
-                    {producto.stock === 0 ? 'Agotado' : 'Agregar al Carrito'}
+                    {producto.stock === 0 ? t('product.outOfStock') : t('product.addToCart')}
                   </button>
                 </div>
               </div>

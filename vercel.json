@@ -26,10 +26,6 @@
     {
       "src": "/api/pedidos(.*)",
       "dest": "/api/pedidos.js"
-    },
-    {
-      "src": "/api/pagos(.*)",
-      "dest": "/api/pagos.js"
     }
   ],
   "env": {

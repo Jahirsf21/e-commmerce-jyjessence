@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import Swal from 'sweetalert2';
-import { cartService } from '../../services/cartService';
+import Ecommerce from '../../patterns/EcommerceFacade';
 
 const Cart = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { estaAutenticado } = useAuth();
   const [carrito, setCarrito] = useState({ items: [], total: 0, cantidadItems: 0 });
+  const [direcciones, setDirecciones] = useState([]);
+  const [direccionSeleccionada, setDireccionSeleccionada] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,16 +19,17 @@ const Cart = () => {
     console.log('Cart component mounted, estaAutenticado:', estaAutenticado);
     if (estaAutenticado) {
       cargarCarrito();
+      cargarDirecciones();
     } else {
       setLoading(false);
-      setError('Debes iniciar sesión para ver tu carrito');
+      setError(t('cart.authRequired'));
     }
   }, [estaAutenticado]);
 
   const cargarCarrito = async () => {
     try {
       setError(null);
-      const data = await cartService.getCart();
+      const data = await Ecommerce.getCartSummary();
       console.log('Datos del carrito recibidos:', data);
       
       // Asegurar que data tiene la estructura correcta
@@ -40,15 +43,15 @@ const Cart = () => {
         setCarrito({ items: [], total: 0, cantidadItems: 0 });
       }
     } catch (error) {
-      console.error('Error al cargar carrito:', error);
-      setError(error.response?.data?.error || 'Error al cargar el carrito');
+  console.error('Error al cargar carrito:', error);
+  setError(error.response?.data?.error || t('cart.loadError'));
       
       // Si es error 401, redirigir al login
       if (error.response?.status === 401) {
         Swal.fire({
           icon: 'warning',
-          title: 'Sesión expirada',
-          text: 'Por favor, inicia sesión nuevamente',
+          title: t('cart.sessionExpiredTitle'),
+          text: t('cart.sessionExpiredText'),
         }).then(() => {
           navigate('/auth/login');
         });
@@ -58,18 +61,30 @@ const Cart = () => {
     }
   };
 
+  const cargarDirecciones = async () => {
+    try {
+      const data = await Ecommerce.getAddresses();
+      setDirecciones(data || []);
+      if (data && data.length === 1) {
+        setDireccionSeleccionada(data[0].idDireccion);
+      }
+    } catch (e) {
+      console.error('Error al cargar direcciones:', e);
+    }
+  };
+
   const actualizarCantidad = async (productoId, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
 
     try {
-      await cartService.updateQuantity(productoId, nuevaCantidad);
+      await Ecommerce.updateCartItem(productoId, nuevaCantidad);
       await cargarCarrito();
     } catch (error) {
       console.error('Error al actualizar cantidad:', error);
       Swal.fire({
         icon: 'error',
         title: t('error'),
-        text: error.response?.data?.error || 'Error al actualizar cantidad',
+        text: error.response?.data?.error || t('cart.updateQuantityError'),
       });
     }
   };
@@ -77,23 +92,23 @@ const Cart = () => {
   const eliminarProducto = async (productoId, nombreProducto) => {
     const result = await Swal.fire({
       icon: 'warning',
-      title: '¿Eliminar producto?',
-      text: `¿Estás seguro de eliminar "${nombreProducto}" del carrito?`,
+      title: t('cart.removeConfirmTitle'),
+      text: t('cart.removeConfirmText', { nombre: nombreProducto }),
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Sí, eliminar',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
     });
 
     if (result.isConfirmed) {
       try {
-        await cartService.removeItem(productoId);
+        await Ecommerce.removeFromCart(productoId);
         await cargarCarrito();
         Swal.fire({
           icon: 'success',
-          title: 'Eliminado',
-          text: 'Producto eliminado del carrito',
+          title: t('cart.removedTitle'),
+          text: t('cart.removedText'),
           timer: 2000,
           showConfirmButton: false,
         });
@@ -102,14 +117,38 @@ const Cart = () => {
         Swal.fire({
           icon: 'error',
           title: t('error'),
-          text: error.response?.data?.error || 'Error al eliminar producto',
+          text: error.response?.data?.error || t('cart.removeError'),
         });
       }
     }
   };
 
-  const procederAlCheckout = () => {
-    navigate('/checkout');
+  // Finalizar pedido sin pasarela
+  const finalizarPedido = async () => {
+    try {
+      if (!direccionSeleccionada) {
+        return Swal.fire({
+          icon: 'warning',
+          title: t('error'),
+          text: t('cart.addressRequired')
+        });
+      }
+  await Ecommerce.completePurchase(direccionSeleccionada);
+      Swal.fire({
+        icon: 'success',
+        title: t('cart.finalizedTitle'),
+        text: t('cart.finalizedText'),
+        timer: 2500,
+        showConfirmButton: false,
+      });
+      navigate('/orders');
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: t('error'),
+        text: error.response?.data?.error || t('cart.finalizeError'),
+      });
+    }
   };
 
   if (loading) {
@@ -130,13 +169,13 @@ const Cart = () => {
           <svg className="mx-auto h-16 w-16 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar el carrito</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('cart.loadErrorTitle')}</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={cargarCarrito}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
-            Reintentar
+            {t('cart.retry')}
           </button>
         </div>
       </div>
@@ -148,11 +187,11 @@ const Cart = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Carrito de Compras</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t('cart.title')}</h1>
           <p className="text-gray-600">
             {carrito.cantidadItems > 0 
-              ? `${carrito.cantidadItems} ${carrito.cantidadItems === 1 ? 'producto' : 'productos'} en tu carrito`
-              : 'Tu carrito está vacío'}
+              ? t('cart.itemCount', { count: carrito.cantidadItems })
+              : t('cart.emptyTitle')}
           </p>
         </div>
 
@@ -162,13 +201,13 @@ const Cart = () => {
             <svg className="mx-auto h-24 w-24 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Tu carrito está vacío</h2>
-            <p className="text-gray-600 mb-6">¡Explora nuestro catálogo y agrega productos!</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('cart.emptyTitle')}</h2>
+            <p className="text-gray-600 mb-6">{t('cart.emptySubtitle')}</p>
             <button
               onClick={() => navigate('/products')}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              Ver Productos
+              {t('cart.viewProducts')}
             </button>
           </div>
         ) : (
@@ -189,7 +228,7 @@ const Cart = () => {
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">{item.nombre}</h3>
                       <p className="text-sm text-gray-500 mb-3">
-                        Precio unitario: ${item.precioUnitario.toFixed(2)}
+                        {t('cart.unitPrice')}: ₡{item.precioUnitario.toFixed(2)}
                       </p>
 
                       {/* Controles de Cantidad */}
@@ -228,9 +267,9 @@ const Cart = () => {
 
                     {/* Subtotal */}
                     <div className="text-right">
-                      <p className="text-sm text-gray-500 mb-1">Subtotal</p>
+                      <p className="text-sm text-gray-500 mb-1">{t('cart.subtotal')}</p>
                       <p className="text-2xl font-bold text-blue-600">
-                        ${(item.cantidad * item.precioUnitario).toFixed(2)}
+                        ₡{(item.cantidad * item.precioUnitario).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -241,40 +280,69 @@ const Cart = () => {
             {/* Resumen del Pedido */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Resumen del Pedido</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{t('cart.summaryTitle')}</h2>
                 
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span>${carrito.total.toFixed(2)}</span>
+                    <span>{t('cart.subtotal')}</span>
+                    <span>₡{carrito.total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Envío</span>
-                    <span className="text-green-600">Gratis</span>
+                    <span>{t('cart.shipping')}</span>
+                    <span className="text-green-600">{t('cart.shippingFree')}</span>
                   </div>
                   <div className="border-t pt-3 flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-blue-600">${carrito.total.toFixed(2)}</span>
+                    <span>{t('cart.total')}</span>
+                    <span className="text-blue-600">₡{carrito.total.toFixed(2)}</span>
                   </div>
                 </div>
 
+                {/* Selección de Dirección */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t('cart.selectAddress')}
+                  </label>
+                  {direcciones.length === 0 && (
+                    <p className="text-sm text-gray-500 mb-2">{t('address.noAddresses')}</p>
+                  )}
+                  {direcciones.length > 0 && (
+                    <select
+                      value={direccionSeleccionada}
+                      onChange={(e) => setDireccionSeleccionada(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">--</option>
+                      {direcciones.map(dir => (
+                        <option key={dir.idDireccion} value={dir.idDireccion}>
+                          {dir.provincia}, {dir.canton}, {dir.distrito} {dir.barrio ? `- ${dir.barrio}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
                 <button
-                  onClick={procederAlCheckout}
-                  className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium mb-3"
+                  onClick={finalizarPedido}
+                  disabled={!direccionSeleccionada}
+                  className={`w-full px-6 py-3 rounded-lg font-medium mb-3 transition-colors ${
+                    direccionSeleccionada
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
-                  Proceder al Pago
+                  {t('cart.finalizeButton')}
                 </button>
 
                 <button
                   onClick={() => navigate('/products')}
                   className="w-full px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Seguir Comprando
+                  {t('cart.keepBuying')}
                 </button>
 
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    🔒 Compra 100% segura con Onvo Pay
+                <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    {t('cart.securePlaceholderRemoved')}
                   </p>
                 </div>
               </div>

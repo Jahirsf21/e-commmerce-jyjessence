@@ -33,6 +33,7 @@ model Direccion {
   codigoPostal  String?
   referencia    String?  // Punto de referencia opcional
   cliente       Cliente  @relation(fields: [clienteId], references: [idCliente], onDelete: Cascade)
+  pedidos       Pedido[]
 
   @@index([clienteId])
 }
@@ -70,16 +71,14 @@ model Pedido {
   fecha           DateTime           @default(now())
   estado          String
   clienteId       String
+  direccionId     String            // Dirección seleccionada (obligatoria)
   montoTotal      Float              @default(0)
-  metodoPago      String?            // "onvo_pay", "efectivo", etc.
-  estadoPago      String             @default("pendiente") // "pendiente", "pagado", "fallido", "reembolsado"
-  onvoPaymentId   String?            @unique // ID de pago de Onvo Pay
-  onvoCheckoutUrl String?            // URL de checkout de Onvo Pay
   articulos       ArticuloDePedido[]
   cliente         Cliente            @relation(fields: [clienteId], references: [idCliente])
-  
-  @@index([estadoPago])
-  @@index([onvoPaymentId])
+  direccion       Direccion          @relation(fields: [direccionId], references: [idDireccion])
+
+  @@index([clienteId])
+  @@index([direccionId])
 }
 
 model ArticuloDePedido {

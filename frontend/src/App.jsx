@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
@@ -8,9 +9,6 @@ import Register from './pages/auth/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import MiInformacion from './pages/account/MiInformacion';
-import Checkout from './pages/cart/Checkout';
-import CheckoutSuccess from './pages/cart/CheckoutSuccess';
-import CheckoutCancel from './pages/cart/CheckoutCancel';
 import Products from './pages/products/Products';
 import Cart from './pages/cart/Cart';
 import Orders from './pages/cart/Orders';
@@ -95,14 +93,7 @@ function AppLayout() {
             </ProtectedRoute>
           } />
           
-          {/* Rutas de checkout */}
-          <Route path="/checkout" element={
-            <ProtectedRoute>
-              <Checkout />
-            </ProtectedRoute>
-          } />
-          <Route path="/checkout/success" element={<CheckoutSuccess />} />
-          <Route path="/checkout/cancel" element={<CheckoutCancel />} />
+          {/* */}
           
           {/* Redirección por defecto */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,12 +1,11 @@
 import prisma from '../../database/config/prisma.js';
 import Carrito from '../patterns/Carrito.js';
 import CarritoCaretaker from '../patterns/CarritoCaretaker.js';
-import axios from 'axios';
+// Eliminado axios y referencias a servicio de pagos, no se usa pasarela en esta fase
 
 class PedidoFacade {
   constructor() {
     this.caretakers = new Map();
-    this.paymentServiceUrl = process.env.PAYMENT_SERVICE_URL || 'http://localhost:3003';
   }
 
   async _getCarritoFromDB(clienteId) {
@@ -170,12 +169,26 @@ class PedidoFacade {
   }
 
 
-  async finalizarCompra(clienteId, token) {
+  // Crea un pedido a partir del carrito SIN integrar pasarela de pago
+  async finalizarPedidoSinPago(clienteId, direccionId) {
     const carrito = await this._getCarritoFromDB(clienteId);
     const items = carrito.getItems();
 
     if (items.length === 0) {
       throw new Error('El carrito está vacío');
+    }
+
+    // Validar dirección seleccionada
+    if (!direccionId) {
+      throw new Error('Debe seleccionar una dirección de envío');
+    }
+
+    const direccion = await prisma.direccion.findFirst({
+      where: { idDireccion: direccionId, clienteId }
+    });
+
+    if (!direccion) {
+      throw new Error('Dirección inválida');
     }
 
     // Calcular monto total antes de crear el pedido
@@ -197,8 +210,8 @@ class PedidoFacade {
       data: {
         clienteId: clienteId,
         estado: 'Pendiente',
+        direccionId: direccionId,
         montoTotal: montoTotal,
-        estadoPago: 'pendiente',
         articulos: {
           create: items.map(item => ({
             productoId: item.productoId,
@@ -213,103 +226,16 @@ class PedidoFacade {
             producto: true
           }
         },
-        cliente: true
+        cliente: true,
+        direccion: true
       }
     });
 
-    try {
-      // Llamar al servicio de pagos para crear el checkout
-      const paymentResponse = await axios.post(
-        `${this.paymentServiceUrl}/api/pagos/checkout`,
-        { pedidoId: pedido.idPedido },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      // Retornar el pedido con la URL de checkout
-      return {
-        pedido: paymentResponse.data.pedido,
-        checkoutUrl: paymentResponse.data.checkoutUrl,
-        paymentId: paymentResponse.data.paymentId
-      };
-    } catch (error) {
-      // Si falla la creación del checkout, cancelar el pedido
-      await prisma.pedido.update({
-        where: { idPedido: pedido.idPedido },
-        data: { 
-          estado: 'Cancelado',
-          estadoPago: 'fallido'
-        }
-      });
-
-      throw new Error(
-        error.response?.data?.error || 
-        'Error al crear sesión de pago'
-      );
-    }
+    // En este modo, simplemente devolvemos el pedido creado
+    return pedido;
   }
 
-  async confirmarPago(pedidoId) {
-    // Confirmar pago y reducir stock (llamado por el webhook)
-    const pedido = await prisma.pedido.findUnique({
-      where: { idPedido: pedidoId },
-      include: {
-        articulos: true
-      }
-    });
-
-    if (!pedido) {
-      throw new Error('Pedido no encontrado');
-    }
-
-    if (pedido.estadoPago === 'pagado') {
-      return pedido; // Ya fue confirmado
-    }
-
-    // Reducir stock y actualizar estado en una transacción
-    const pedidoConfirmado = await prisma.$transaction(async (prisma) => {
-      // Reducir stock de productos
-      for (const item of pedido.articulos) {
-        await prisma.producto.update({
-          where: { idProducto: item.productoId },
-          data: {
-            stock: {
-              decrement: item.cantidad
-            }
-          }
-        });
-      }
-
-      // Actualizar pedido
-      return await prisma.pedido.update({
-        where: { idPedido: pedidoId },
-        data: {
-          estado: 'confirmado',
-          estadoPago: 'pagado'
-        },
-        include: {
-          articulos: {
-            include: {
-              producto: true
-            }
-          }
-        }
-      });
-    });
-
-    // Limpiar carrito del cliente
-    await prisma.carritoItem.deleteMany({
-      where: { clienteId: pedido.clienteId }
-    });
-
-    this._getCaretaker(pedido.clienteId).limpiar();
-
-    return pedidoConfirmado;
-  }
+  // confirmación de pago eliminada en esta fase (sin pasarela de pago)
 
   async obtenerHistorialPedidos(clienteId) {
     const pedidos = await prisma.pedido.findMany({
@@ -319,7 +245,8 @@ class PedidoFacade {
           include: {
             producto: true
           }
-        }
+        },
+        direccion: true
       },
       orderBy: {
         fecha: 'desc'
@@ -343,10 +270,10 @@ class PedidoFacade {
             nombre: true,
             apellido: true,
             email: true,
-            telefono: true,
-            direccion: true
+            telefono: true
           }
-        }
+        },
+        direccion: true
       }
     });
 
@@ -376,7 +303,8 @@ class PedidoFacade {
           include: {
             producto: true
           }
-        }
+        },
+        direccion: true
       },
       orderBy: {
         fecha: 'desc'

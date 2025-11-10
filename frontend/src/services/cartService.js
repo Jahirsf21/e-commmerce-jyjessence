@@ -37,8 +37,8 @@ export const cartService = {
     return respuesta.data;
   },
 
-  async checkout() {
-    const respuesta = await api.post('/pedidos/checkout');
+  async finalize(direccionId) {
+    const respuesta = await api.post('/pedidos/finalizar', { direccionId });
     return respuesta.data;
   }
 };

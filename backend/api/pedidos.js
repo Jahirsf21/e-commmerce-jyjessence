@@ -100,21 +100,24 @@ app.post('/api/carrito/rehacer', authMiddleware, async (req, res) => {
 // ==   RUTAS DE PEDIDOS (AUTENTICADAS)   ==
 // ==========================================
 
-app.post('/api/pedidos/checkout', authMiddleware, async (req, res) => {
+// Finalizar pedido sin pasarela de pago
+app.post('/api/pedidos/finalizar', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    const resultado = await PedidoFacade.finalizarCompra(clienteId, token);
+    const { direccionId } = req.body || {};
+
+    if (!direccionId) {
+      return res.status(400).json({ error: 'Debe seleccionar una dirección de envío' });
+    }
+
+    const pedido = await PedidoFacade.finalizarPedidoSinPago(clienteId, direccionId);
     res.status(201).json({ 
       mensaje: 'Pedido creado exitosamente', 
-      pedido: resultado.pedido,
-      checkoutUrl: resultado.checkoutUrl,
-      paymentId: resultado.paymentId
+      pedido
     });
   } catch (error) {
-    console.error('Error al finalizar compra:', error);
-    res.status(500).json({ error: error.message || 'Error al finalizar compra' });
+    console.error('Error al finalizar pedido:', error);
+    res.status(500).json({ error: error.message || 'Error al finalizar pedido' });
   }
 });
 

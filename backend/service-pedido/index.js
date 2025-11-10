@@ -95,20 +95,18 @@ app.post('/api/carrito/rehacer', authMiddleware, async (req, res) => {
 });
 
 
-app.post('/api/pedidos/checkout', authMiddleware, async (req, res) => {
+// Finalizar pedido sin pasarela de pagos (solo crea el pedido con estado "Pendiente")
+app.post('/api/pedidos/finalizar', authMiddleware, async (req, res) => {
   try {
     const clienteId = req.user.idCliente;
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ error: 'Token no proporcionado' });
-    }
-    
-    const result = await PedidoFacade.finalizarCompra(clienteId, token);
-    res.status(201).json(result);
+    const pedido = await PedidoFacade.finalizarPedidoSinPago(clienteId);
+    res.status(201).json({ 
+      mensaje: 'Pedido creado exitosamente',
+      pedido
+    });
   } catch (error) {
-    console.error('Error al finalizar compra:', error);
-    res.status(500).json({ error: error.message || 'Error al finalizar compra' });
+    console.error('Error al finalizar pedido:', error);
+    res.status(500).json({ error: error.message || 'Error al finalizar pedido' });
   }
 });
 

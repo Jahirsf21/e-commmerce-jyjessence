@@ -70,6 +70,7 @@ CREATE TABLE "Pedido" (
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "estado" TEXT NOT NULL,
     "clienteId" TEXT NOT NULL,
+    "montoTotal" DOUBLE PRECISION NOT NULL DEFAULT 0,
 
     CONSTRAINT "Pedido_pkey" PRIMARY KEY ("idPedido")
 );
